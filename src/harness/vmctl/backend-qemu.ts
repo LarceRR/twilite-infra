@@ -1,54 +1,14 @@
 import { mkdirSync, rmSync, existsSync, readFileSync } from 'node:fs';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
+import { connect } from 'node:net';
 import type { VmBackend, VmPaths, VmPreflight, VmProfile, VmStatus } from './types.ts';
 import { detectPreflight } from './preflight.ts';
 import { qemuCommand } from './commands.ts';
+import { ensureUbuntuImage } from './image.ts';
+import { ensureSshKey, writeCloudInit } from './seed.ts';
 
-function run(file: string, args: readonly string[], logPath?: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(file, [...args], { stdio: logPath === undefined ? 'inherit' : ['ignore', 'pipe', 'pipe'] });
-    let output = '';
-    child.stdout?.on('data', (chunk: Buffer) => { output += chunk.toString(); });
-    child.stderr?.on('data', (chunk: Buffer) => { output += chunk.toString(); });
-    child.on('error', reject);
-    child.on('close', (code) => { if (code === 0) resolve(); else reject(new Error(`${file} exited ${code}: ${output.slice(-4000)}`)); });
-  });
-}
-
-function pid(paths: VmPaths): number | undefined {
-  try { const value = Number.parseInt(readFileSync(`${paths.root}/qemu.pid`, 'utf8').trim(), 10); return Number.isInteger(value) ? value : undefined; } catch { return undefined; }
-}
-
-export function createQemuBackend(): VmBackend {
-  const backend: VmBackend = {
-    name: 'qemu',
-    async preflight(): Promise<VmPreflight> { return detectPreflight('qemu'); },
-    async status(_profile, paths): Promise<VmStatus> {
-      const processId = pid(paths);
-      if (processId === undefined) return existsSync(paths.disk) ? 'stopped' : 'absent';
-      try { process.kill(processId, 0); return 'running'; } catch { return 'stopped'; }
-    },
-    async create(profile, paths): Promise<void> {
-      mkdirSync(paths.root, { recursive: true });
-      mkdirSync(paths.seedDir, { recursive: true });
-      if (!existsSync(paths.disk)) await run('qemu-img', ['create', '-f', 'qcow2', paths.disk, `${profile.diskGiB}G`]);
-    },
-    async start(profile, paths): Promise<void> {
-      const check = detectPreflight('qemu');
-      if (!check.qemu) throw new Error('qemu-system-x86_64 is required');
-      await run(...Object.values(qemuCommand(profile, paths, check.acceleration)) as [string, readonly string[]]);
-    },
-    async stop(_profile, paths): Promise<void> {
-      const processId = pid(paths);
-      if (processId !== undefined) { try { process.kill(processId, 'SIGTERM'); } catch { /* already stopped */ } }
-    },
-    async reboot(_profile, paths): Promise<void> {
-      const processId = pid(paths);
-      if (processId === undefined) throw new Error('VM is not running');
-      process.kill(processId, 'SIGHUP');
-    },
-    async destroy(_profile, paths): Promise<void> { await backend.stop(_profile, paths); rmSync(paths.root, { recursive: true, force: true }); },
-    async reset(profile, paths): Promise<void> { await backend.destroy(profile, paths); await backend.create(profile, paths); },
-  };
-  return backend;
-}
+function run(file: string, args: readonly string[]): Promise<void> { return new Promise((resolve, reject) => { const child = spawn(file, [...args], { stdio: ['ignore', 'pipe', 'pipe'] }); let output = ''; child.stdout.on('data', (chunk: Buffer) => { output += chunk.toString(); }); child.stderr.on('data', (chunk: Buffer) => { output += chunk.toString(); }); child.on('error', reject); child.on('close', (code) => code === 0 ? resolve() : reject(new Error(`${file} exited ${code}: ${output.slice(-4000)}`))); }); }
+function pid(paths: VmPaths): number | undefined { try { const value = Number.parseInt(readFileSync(`${paths.root}/qemu.pid`, 'utf8').trim(), 10); return Number.isInteger(value) ? value : undefined; } catch { return undefined; } }
+function createSeedIso(paths: VmPaths): void { const tool = (() => { for (const candidate of ['cloud-localds', 'genisoimage', 'mkisofs']) { try { execFileSync(candidate, ['--version'], { stdio: 'ignore' }); return candidate; } catch { /* try next */ } } throw new Error('cloud-localds or genisoimage/mkisofs is required to build the cloud-init seed'); })(); if (tool === 'cloud-localds') execFileSync(tool, [paths.seedImage, `${paths.seedDir}/user-data`, `${paths.seedDir}/meta-data`], { stdio: 'ignore' }); else execFileSync(tool, ['-output', paths.seedImage, '-volid', 'cidata', '-joliet', '-rock', `${paths.seedDir}/user-data`, `${paths.seedDir}/meta-data`], { stdio: 'ignore' }); }
+async function qmp(paths: VmPaths, command: string): Promise<void> { await new Promise<void>((resolve, reject) => { const socket = connect(paths.qmpSocket); let output = ''; socket.on('data', (chunk: Buffer) => { output += chunk.toString(); if (output.includes('return') || output.includes('error')) { socket.end(); output.includes('error') ? reject(new Error(`QMP command failed: ${output}`)) : resolve(); } }); socket.on('error', reject); socket.on('connect', () => { socket.write(`${JSON.stringify({ execute: 'qmp_capabilities' })}\n`); socket.write(`${JSON.stringify({ execute: command })}\n`); }); }); }
+export function createQemuBackend(): VmBackend { const backend: VmBackend = { name: 'qemu', async preflight(): Promise<VmPreflight> { return detectPreflight('qemu'); }, async status(_profile, paths): Promise<VmStatus> { const processId = pid(paths); if (processId === undefined) return existsSync(paths.disk) ? 'stopped' : 'absent'; try { process.kill(processId, 0); return 'running'; } catch { return 'stopped'; } }, async create(profile, paths): Promise<void> { mkdirSync(paths.root, { recursive: true }); await ensureUbuntuImage(paths.baseImage); ensureSshKey(paths); writeCloudInit(paths, `${paths.privateKey}.pub`); if (!existsSync(paths.seedImage)) createSeedIso(paths); if (!existsSync(paths.disk)) await run('qemu-img', ['create', '-F', 'qcow2', '-f', 'qcow2', '-b', paths.baseImage, paths.disk, `${profile.diskGiB}G`]); }, async start(profile, paths): Promise<void> { const check = detectPreflight('qemu'); if (!check.qemu) throw new Error('qemu-system-x86_64 is required'); const command = qemuCommand(profile, paths, check.acceleration); await run(command.file, command.args); }, async stop(_profile, paths): Promise<void> { const processId = pid(paths); if (processId !== undefined) { try { process.kill(processId, 'SIGTERM'); } catch { /* already stopped */ } } }, async reboot(_profile, paths): Promise<void> { if (pid(paths) === undefined) throw new Error('VM is not running'); await qmp(paths, 'system_reset'); }, async destroy(_profile, paths): Promise<void> { await backend.stop(_profile, paths); rmSync(paths.root, { recursive: true, force: true }); }, async reset(profile, paths): Promise<void> { await backend.destroy(profile, paths); await backend.create(profile, paths); } }; return backend; }
