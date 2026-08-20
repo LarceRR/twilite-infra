@@ -11,22 +11,9 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     secrets:
       - postgres_superuser_password
-    command:
-      - postgres
-      - -c
-      - archive_mode=on
-      - -c
-      - archive_timeout=60s
-      - -c
-      - wal_level=replica
-      - -c
-      - max_connections=80
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - infra_net
-      - prod_net
-      - stage_net
+    command: ["postgres", "-c", "archive_mode=on", "-c", "archive_timeout=60s", "-c", "wal_level=replica", "-c", "max_connections=80"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    networks: [infra_net, prod_net, stage_net]
     mem_limit: 384m
     mem_reservation: 256m
     cpus: "1.00"
@@ -41,13 +28,9 @@ services:
     image: redis:7.4.1@sha256:REPLACE_WITH_REVIEWED_DIGEST
     restart: unless-stopped
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
-    volumes:
-      - redis_data:/data
-      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
-    networks:
-      - infra_net
-      - prod_net
-      - stage_net
+    volumes: ["redis_data:/data", "./redis.conf:/usr/local/etc/redis/redis.conf:ro"]
+    secrets: [redis_acl]
+    networks: [infra_net, prod_net, stage_net]
     mem_limit: 96m
     mem_reservation: 64m
     cpus: "0.25"
@@ -66,6 +49,7 @@ services:
       - openbao_data:/openbao/data
       - ./../../openbao/config/openbao.hcl:/openbao/config/openbao.hcl:ro
       - ./../../openbao/tls:/openbao/tls:ro
+      - ./../../openbao/policies:/openbao/policies:ro
     networks: [infra_net]
     mem_limit: 192m
     mem_reservation: 128m
@@ -77,21 +61,17 @@ services:
       retries: 6
 
 volumes:
-  postgres_data:
-    name: lumi_postgres_data
-  redis_data:
-    name: lumi_redis_data
-  openbao_data:
-    name: lumi_openbao_data
+  postgres_data: { name: lumi_postgres_data }
+  redis_data: { name: lumi_redis_data }
+  openbao_data: { name: lumi_openbao_data }
 
 networks:
-  infra_net:
-    name: lumi_infra_net
-  prod_net:
-    name: lumi_prod_net
-  stage_net:
-    name: lumi_stage_net
+  infra_net: { name: lumi_infra_net }
+  prod_net: { name: lumi_prod_net }
+  stage_net: { name: lumi_stage_net }
 
 secrets:
   postgres_superuser_password:
     file: ${POSTGRES_SUPERUSER_PASSWORD_FILE:?set to a root-only local secret path}
+  redis_acl:
+    file: ${REDIS_ACL_FILE:?set to a root-only local secret path}

@@ -16,14 +16,8 @@ services:
       OPENBAO_ADDR: https://openbao:8200
       OPENBAO_ROLE: staging-api
       STAGING_SMOKE_CREDENTIAL_FILE: /run/secrets/stage_smoke_credential
-    secrets:
-      - stage_database_url
-      - stage_redis_url
-      - stage_openbao_token
-      - stage_smoke_credential
-    networks:
-      - stage_net
-      - infra_net
+    secrets: [stage_database_url, stage_redis_url, stage_openbao_token, stage_smoke_credential]
+    networks: [stage_net, infra_net]
     mem_limit: 192m
     mem_reservation: 128m
     cpus: "0.25"
@@ -40,19 +34,11 @@ services:
       com.twilite.immutable: "true"
 
 networks:
-  stage_net:
-    external: true
-    name: lumi_stage_net
-  infra_net:
-    external: true
-    name: lumi_infra_net
+  stage_net: { external: true, name: lumi_stage_net }
+  infra_net: { external: true, name: lumi_infra_net }
 
 secrets:
-  stage_database_url:
-    file: ${STAGE_DATABASE_URL_FILE:?set secret file}
-  stage_redis_url:
-    file: ${STAGE_REDIS_URL_FILE:?set secret file}
-  stage_openbao_token:
-    file: ${STAGE_OPENBAO_TOKEN_FILE:?set secret file}
-  stage_smoke_credential:
-    file: ${STAGE_SMOKE_CREDENTIAL_FILE:?set secret file}
+  stage_database_url: { file: ${STAGE_DATABASE_URL_FILE:?set secret file} }
+  stage_redis_url: { file: ${STAGE_REDIS_URL_FILE:?set secret file} }
+  stage_openbao_token: { file: ${STAGE_OPENBAO_TOKEN_FILE:?set secret file} }
+  stage_smoke_credential: { file: ${STAGE_SMOKE_CREDENTIAL_FILE:?set secret file} }

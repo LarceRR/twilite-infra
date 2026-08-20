@@ -15,13 +15,8 @@ services:
       REDIS_URL_FILE: /run/secrets/prod_redis_url
       OPENBAO_ADDR: https://openbao:8200
       OPENBAO_ROLE: production-api
-    secrets:
-      - prod_database_url
-      - prod_redis_url
-      - prod_openbao_token
-    networks:
-      - prod_net
-      - infra_net
+    secrets: [prod_database_url, prod_redis_url, prod_openbao_token]
+    networks: [prod_net, infra_net]
     mem_limit: 384m
     mem_reservation: 256m
     cpus: "1.00"
@@ -38,17 +33,10 @@ services:
       com.twilite.immutable: "true"
 
 networks:
-  prod_net:
-    external: true
-    name: lumi_prod_net
-  infra_net:
-    external: true
-    name: lumi_infra_net
+  prod_net: { external: true, name: lumi_prod_net }
+  infra_net: { external: true, name: lumi_infra_net }
 
 secrets:
-  prod_database_url:
-    file: ${PROD_DATABASE_URL_FILE:?set secret file}
-  prod_redis_url:
-    file: ${PROD_REDIS_URL_FILE:?set secret file}
-  prod_openbao_token:
-    file: ${PROD_OPENBAO_TOKEN_FILE:?set secret file}
+  prod_database_url: { file: ${PROD_DATABASE_URL_FILE:?set secret file} }
+  prod_redis_url: { file: ${PROD_REDIS_URL_FILE:?set secret file} }
+  prod_openbao_token: { file: ${PROD_OPENBAO_TOKEN_FILE:?set secret file} }
