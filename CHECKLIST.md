@@ -1,6 +1,6 @@
 # twilite-infra implementation checklist (0% -> 100%)
 
-Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Phase order and gates follow §18.2. Decisions D1-D13 are binding. Any contradiction is logged in the issue before implementation changes.
+Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Phase order follows §18.2; D1-D13 are binding. New contradictions go to issue #167 before code changes.
 
 ## Weighted progress
 
@@ -8,40 +8,54 @@ Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Ph
 |---|---:|---|
 | 0 Repository and engineering foundation | 4% | foundation in PR #1 |
 | 1 CLI foundation | 12% | foundation in PR #1 |
-| 2 Linux VM harness | 10% | implementation in PR #2, gate pending |
-| 3 SSH/bootstrap | 10% | implementation in PR #3, VM gate pending |
-| 4 OS/security | 9% | implementation in PR #4, VM gate pending |
-| 5 Docker/runtime | 9% | pending |
-| 6 OpenBao | 8% | pending |
-| 7 Application deployment | 8% | pending |
+| 2 Linux VM harness | 10% | PR #2, real-VM gate pending |
+| 3 SSH/bootstrap | 10% | PR #3, real-VM gate pending |
+| 4 OS/security | 9% | PR #4, real-VM gate pending |
+| 5 Docker/runtime | 9% | implementation in PR #5, real-VM gate pending |
+| 6 OpenBao | 8% | implementation in PR #5, recovery gate pending |
+| 7 Application deployment | 8% | implementation in PR #5, rollout gate pending |
 | 8 PostgreSQL PITR | 8% | pending |
 | 9 Monitoring/logging | 6% | pending |
 | 10 Chaos/failure injection | 6% | pending |
 | 11 Full DR | 6% | pending |
 | 12 Scaling simulation | 4% | pending |
 
-**Honest status: Phase 4 files and renderers are implemented and unit-tested; the VM acceptance gate is not passed until the real systemd Ubuntu VM proves exposure, reboot/idempotency and security behavior.**
+**Honest status: Phases 5-7 are implemented and unit-tested; real-VM acceptance, isolation, OpenBao recovery and rollback gates are not claimed complete.**
 
-## Phase 4: OS and security baseline
+## Phase 5: Docker/runtime baseline
 
-- [x] 4.1 Package baseline and full-upgrade script.
-- [x] 4.2 UTC/NTP service enablement and reboot-safe systemd dependency.
-- [x] 4.3 Explicit swap settings remain typed from Phase 1.
-- [x] 4.4 UFW deny-in/allow-out with inventory-driven public ports.
-- [x] 4.5 Fail2ban SSH jail using systemd journal and nftables.
-- [x] 4.6 Journald retention and size caps.
-- [x] 4.7 Docker Engine installation script and Unix-socket-only daemon policy.
-- [x] 4.8 Docker log rotation, live-restore and systemd drop-in.
-- [x] 4.9 Unattended security updates with automatic reboot disabled.
-- [x] 4.10 AppArmor/auditd package and verification checks.
-- [x] 4.11 Explicit IPv6 policy and measured sysctl baseline.
-- [x] 4.12 Typed renderers and unit tests for negative exposure cases.
-- [ ] 4.13 Reboot detection/reconnect integration test on real VM.
-- [ ] 4.14 External port scan shows only intended public services.
-- [ ] 4.15 Second provisioning run is idempotent on real VM.
+- [x] 5.1 Digest-pinned Compose services and separate project names.
+- [x] 5.2 Production/staging networks and Docker secrets are separate.
+- [x] 5.3 PostgreSQL, Redis and OpenBao healthchecks.
+- [x] 5.4 Resource limits match the 2 GiB budget.
+- [x] 5.5 Restart policy, read-only API filesystem, dropped capabilities and no-new-privileges.
+- [x] 5.6 API readiness endpoint contract.
+- [x] 5.7 Production/staging logical isolation layout.
+- [ ] 5.8 Real VM load test proves staging cannot starve production.
+- [ ] 5.9 Real VM negative PostgreSQL/Redis cross-access tests.
 
-**Gate:** external/VM-side scan shows only intended public services; second provisioning run produces no unintended changes.
+## Phase 6: OpenBao
 
-## Phase 5 through 12
+- [x] 6.1 TLS 1.3 listener and Raft Integrated Storage config.
+- [x] 6.2 Explicit local Transit versus production KMS contract.
+- [x] 6.3 Separate production/staging least-privilege policies.
+- [x] 6.4 Audit enablement and root bootstrap from external secret file.
+- [x] 6.5 Fail-closed deployment dependency contract.
+- [ ] 6.6 Real VM init, seal/unseal and reboot recovery drill.
+- [ ] 6.7 Real VM Raft snapshot save/restore.
 
-Separate PRs implement Docker/Compose runtime isolation, OpenBao, deployment/rollback, pgBackRest/PITR, monitoring, chaos, DR and scaling. No real VPS before local acceptance, chaos and DR gates pass twice (D10).
+## Phase 7: application deployment
+
+- [x] 7.1 Immutable digest/SHA validation; `latest` rejected.
+- [x] 7.2 Capacity check before rollout.
+- [x] 7.3 Separate fixed migration step.
+- [x] 7.4 Readiness and protected smoke gates.
+- [x] 7.5 Previous known-good release retention.
+- [x] 7.6 Automatic-failure stop contract and explicit rollback script.
+- [x] 7.7 Staging first, production protected environment and concurrency.
+- [ ] 7.8 Real VM broken-release automatic rollback.
+- [ ] 7.9 Real VM migration failure blocks rollout.
+
+## Remaining phases
+
+Phase 8 implements pgBackRest/WAL/PITR; Phase 9 monitoring; Phase 10 chaos; Phase 11 DR; Phase 12 scaling. No real VPS before the complete local acceptance, chaos and DR cycle passes twice (D10).
