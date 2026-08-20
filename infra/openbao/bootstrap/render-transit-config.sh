@@ -6,15 +6,9 @@ set -Eeuo pipefail
 : "${TRANSIT_MOUNT_PATH:?set Transit mount path}"
 : "${OPENBAO_CONFIG_OUTPUT:?set output path outside the repository}"
 
-case "$TRANSIT_ADDRESS" in
-  *[[:space:]"]'"'"'\\$]*) echo 'unsafe transit address' >&2; exit 2 ;;
-esac
-case "$TRANSIT_KEY_NAME" in
-  *[[:space:]"]'"'"'\\$]*) echo 'unsafe transit key name' >&2; exit 2 ;;
-esac
-case "$TRANSIT_MOUNT_PATH" in
-  *[[:space:]"]'"'"'\\$]*) echo 'unsafe transit mount path' >&2; exit 2 ;;
-esac
+[[ "$TRANSIT_ADDRESS" =~ ^https://[A-Za-z0-9._:/-]+$ ]] || { echo 'unsafe transit address' >&2; exit 2; }
+[[ "$TRANSIT_KEY_NAME" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo 'unsafe transit key name' >&2; exit 2; }
+[[ "$TRANSIT_MOUNT_PATH" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo 'unsafe transit mount path' >&2; exit 2; }
 
 install -d -m 700 "$(dirname -- "$OPENBAO_CONFIG_OUTPUT")"
 printf 'seal "transit" {\n  address = "%s"\n  key_name = "%s"\n  mount_path = "%s"\n  disable_renewal = "false"\n}\n' "$TRANSIT_ADDRESS" "$TRANSIT_KEY_NAME" "$TRANSIT_MOUNT_PATH" > "$OPENBAO_CONFIG_OUTPUT"
