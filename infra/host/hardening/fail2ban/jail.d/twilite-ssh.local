@@ -1,0 +1,14 @@
+[DEFAULT]
+backend = systemd
+banaction = nftables-multiport
+bantime = 1h
+findtime = 10m
+maxretry = 5
+ignoreip = 127.0.0.1/8 ::1
+
+[sshd]
+enabled = true
+port = 5564
+filter = sshd
+logpath = %(sshd_log)s
+maxretry = 3
