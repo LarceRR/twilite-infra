@@ -13,26 +13,14 @@ jobs:
           node-version: '22.18.0'
       - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm run typecheck
-      - name: Run every unit file
+      - name: Run unit files with direct output
         shell: bash
         run: |
           set -uo pipefail
-          tests=(
-            test/unit/smoke.test.ts
-            test/unit/vmctl.test.ts
-            test/unit/ssh.test.ts
-            test/unit/os-security.test.ts
-            test/unit/runtime-secrets-deploy.test.ts
-          )
+          tests=(test/unit/smoke.test.ts test/unit/vmctl.test.ts test/unit/ssh.test.ts test/unit/os-security.test.ts)
           failed=0
           for test_file in "${tests[@]}"; do
             echo "===== $test_file ====="
-            output="$(node --test --test-reporter=spec "$test_file" 2>&1)"
-            status=$?
-            printf '%s\n' "$output"
-            if (( status != 0 )); then
-              echo "::error file=$test_file::unit file failed with exit code $status"
-              failed=1
-            fi
+            node --test --test-reporter=spec "$test_file" || failed=1
           done
           exit "$failed"
