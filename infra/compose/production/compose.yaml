@@ -1,0 +1,39 @@
+name: ${PROD_PROJECT_NAME:-lumi-prod}
+services:
+  api:
+    image: ${API_IMAGE_REPOSITORY:?set immutable GHCR repository}@${API_IMAGE_DIGEST:?set sha256 digest, never latest}
+    restart: unless-stopped
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=32m"]
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL_FILE: /run/secrets/prod_database_url
+      REDIS_URL_FILE: /run/secrets/prod_redis_url
+      OPENBAO_ADDR: https://openbao:8200
+      OPENBAO_ROLE: production-api
+    secrets: [prod_database_url, prod_redis_url, prod_openbao_token]
+    networks: [prod_net, infra_net]
+    mem_limit: 384m
+    mem_reservation: 256m
+    cpus: "1.00"
+    cpu_shares: 1024
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health/ready >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    labels:
+      com.twilite.environment: production
+      com.twilite.release: ${RELEASE_SHA:?set release SHA}
+      com.twilite.immutable: "true"
+networks:
+  prod_net: { external: true, name: lumi_prod_net }
+  infra_net: { external: true, name: lumi_infra_net }
+secrets:
+  prod_database_url: { file: ${PROD_DATABASE_URL_FILE:?set secret file} }
+  prod_redis_url: { file: ${PROD_REDIS_URL_FILE:?set secret file} }
+  prod_openbao_token: { file: ${PROD_OPENBAO_TOKEN_FILE:?set secret file} }
