@@ -1,0 +1,52 @@
+import { chmodSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { dirname, join, basename } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { uniqueSuffix } from '../util/ids.ts';
+
+export interface GeneratedKeyPair {
+  readonly privateKeyPath: string;
+  readonly publicKeyPath: string;
+  readonly comment: string;
+}
+
+export function generateEd25519KeyPair(directory: string, label: string, now = new Date()): GeneratedKeyPair {
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const stamp = now.toISOString().replace(/[-:.TZ]/gu, '').slice(0, 14);
+  const base = join(directory, `id_ed25519-${safeLabel(label)}-${stamp}`);
+  const existing = readdirSync(directory).map((entry) => join(directory, entry));
+  const privateKeyPath = uniqueSuffix(existing, base);
+  const publicKeyPath = `${privateKeyPath}.pub`;
+  const result = spawnSync('ssh-keygen', ['-q', '-t', 'ed25519', '-N', '', '-f', privateKeyPath, '-C', `${label}-${stamp}`], { encoding: 'utf8', shell: false });
+  if (result.error !== undefined) throw result.error;
+  if (result.status !== 0) throw new Error(`ssh-keygen failed: ${result.stderr.trim() || `exit ${result.status}`}`);
+  chmodSync(privateKeyPath, 0o600);
+  chmodSync(publicKeyPath, 0o644);
+  return { privateKeyPath, publicKeyPath, comment: `${label}-${stamp}` };
+}
+
+export function validatePrivateKeyPath(path: string): void {
+  if (!existsSync(path)) throw new Error(`private SSH key does not exist: ${path}`);
+  if (path.includes('') || path.includes('\n')) throw new Error('private SSH key path contains unsafe characters');
+  const mode = (BigInt((awaitableStat(path)).mode) & 0o777n);
+  if (mode !== 0o600n && mode !== 0o400n) throw new Error(`private SSH key must be mode 0600 or 0400: ${path}`);
+}
+
+function awaitableStat(path: string): { readonly mode: number } {
+  // Kept sync because this is a preflight before a network operation.
+  const { statSync } = requireFs();
+  return statSync(path);
+}
+
+function requireFs(): typeof import('node:fs') {
+  // Avoid a runtime dependency while keeping this module direct-executable under Node type stripping.
+  return { statSync: (await importFs()).statSync } as unknown as typeof import('node:fs');
+}
+
+function importFs(): typeof import('node:fs') {
+  return undefined as never;
+}
+
+function safeLabel(value: string): string {
+  const normalized = value.replace(/[^A-Za-z0-9._-]+/gu, '-').replace(/^-+|-+$/gu, '');
+  return normalized.length > 0 ? normalized.slice(0, 40) : 'admin';
+}
