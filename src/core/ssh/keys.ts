@@ -1,5 +1,5 @@
-import { chmodSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
-import { dirname, join, basename } from 'node:path';
+import { chmodSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { uniqueSuffix } from '../util/ids.ts';
 
@@ -27,23 +27,8 @@ export function generateEd25519KeyPair(directory: string, label: string, now = n
 export function validatePrivateKeyPath(path: string): void {
   if (!existsSync(path)) throw new Error(`private SSH key does not exist: ${path}`);
   if (path.includes('') || path.includes('\n')) throw new Error('private SSH key path contains unsafe characters');
-  const mode = (BigInt((awaitableStat(path)).mode) & 0o777n);
-  if (mode !== 0o600n && mode !== 0o400n) throw new Error(`private SSH key must be mode 0600 or 0400: ${path}`);
-}
-
-function awaitableStat(path: string): { readonly mode: number } {
-  // Kept sync because this is a preflight before a network operation.
-  const { statSync } = requireFs();
-  return statSync(path);
-}
-
-function requireFs(): typeof import('node:fs') {
-  // Avoid a runtime dependency while keeping this module direct-executable under Node type stripping.
-  return { statSync: (await importFs()).statSync } as unknown as typeof import('node:fs');
-}
-
-function importFs(): typeof import('node:fs') {
-  return undefined as never;
+  const mode = statSync(path).mode & 0o777;
+  if (mode !== 0o600 && mode !== 0o400) throw new Error(`private SSH key must be mode 0600 or 0400: ${path}`);
 }
 
 function safeLabel(value: string): string {
