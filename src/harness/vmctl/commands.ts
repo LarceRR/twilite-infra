@@ -21,14 +21,7 @@ export function qemuCommand(profile: VmProfile, paths: VmPaths, acceleration: 'k
   };
 }
 
-export function qemuStatusCommand(paths: VmPaths): VmCommand {
-  return { file: 'test', args: ['-f', `${paths.root}/qemu.pid`] };
-}
-
-export function qemuStopCommand(paths: VmPaths): VmCommand {
-  return { file: 'kill', args: ['-TERM', `$(cat ${paths.root}/qemu.pid)`] };
-}
-
 export function safeQemuStopCommand(pid: number): VmCommand {
+  if (!Number.isSafeInteger(pid) || pid <= 0) throw new Error('invalid VM process id');
   return { file: 'kill', args: ['-TERM', String(pid)] };
 }

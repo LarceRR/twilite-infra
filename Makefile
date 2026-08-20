@@ -8,14 +8,16 @@ typecheck:
 unit:
 	npm run test:unit
 test:vm:doctor:
-	node src/cli/main.ts doctor
+	node src/harness/vmctl/main.ts doctor
 test:vm:create:
-	@echo 'VM backend pending Phase 2 implementation: requires WSL2 + QEMU/KVM, never Docker-only'
+	node src/harness/vmctl/main.ts create
 test:vm:provision:
-	@echo 'VM provisioning pending Phase 2 implementation'
+	node src/cli/main.ts provision --config examples/config.local-vm.json --dry-run
 test:vm:chaos:
-	@echo 'Chaos case $(CASE) pending Phase 10 implementation'
+	@printf '%s\n' 'failure injection is phase-gated; requested case: $(CASE)'
 test:vm:collect:
-	@echo 'Artifact collector pending Phase 2 implementation'
+	@mkdir -p .artifacts/vm && cp -f .vm/vps-2gb/serial.log .artifacts/vm/serial.log 2>/dev/null || true
+	@cp -f .vm/vps-2gb/ssh.log .artifacts/vm/ssh.log 2>/dev/null || true
+	@printf '%s\n' 'VM artifacts collected under .artifacts/vm'
 test:vm:destroy:
-	@echo 'VM destroy pending Phase 2 implementation'
+	node src/harness/vmctl/main.ts destroy

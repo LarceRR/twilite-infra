@@ -12,8 +12,8 @@
     "vmctl": "node src/harness/vmctl/main.ts",
     "typecheck": "tsc --noEmit",
     "lint": "npm run typecheck",
-    "test": "node --test --test-reporter=spec test/unit/smoke.test.ts",
-    "test:unit": "node --test --test-reporter=spec test/unit/smoke.test.ts",
+    "test": "node --test --test-reporter=spec test/unit/smoke.test.ts test/unit/vmctl.test.ts",
+    "test:unit": "node --test --test-reporter=spec test/unit/smoke.test.ts test/unit/vmctl.test.ts",
     "check": "npm run typecheck && npm run test:unit"
   },
   "devDependencies": { "@types/node": "^22.18.0", "typescript": "^5.9.2" },

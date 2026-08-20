@@ -12,11 +12,40 @@ const paths = pathsFor(root, profile);
 const command = process.argv[2] ?? 'doctor';
 
 async function main(): Promise<void> {
-  if (command === 'doctor') { console.log(JSON.stringify(detectPreflight('qemu'), null, 2)); return; }
-  if (command === 'create' || command === 'reset') { await backend[command](profile, paths); console.log(`VM ${command}d: ${profile.name}`); return; }
-  if (command === 'start' || command === 'stop' || command === 'reboot' || command === 'destroy') { await backend[command](profile, paths); console.log(`VM ${command}: ${profile.name}`); return; }
-  if (command === 'status') { console.log(await backend.status(profile, paths)); return; }
-  throw new Error(`unknown vmctl command: ${command}`);
+  switch (command) {
+    case 'doctor':
+      console.log(JSON.stringify(await backend.preflight(), null, 2));
+      return;
+    case 'create':
+      await backend.create(profile, paths);
+      console.log(`VM created: ${profile.name}`);
+      return;
+    case 'reset':
+      await backend.reset(profile, paths);
+      console.log(`VM reset: ${profile.name}`);
+      return;
+    case 'start':
+      await backend.start(profile, paths);
+      console.log(`VM started: ${profile.name}`);
+      return;
+    case 'stop':
+      await backend.stop(profile, paths);
+      console.log(`VM stopped: ${profile.name}`);
+      return;
+    case 'reboot':
+      await backend.reboot(profile, paths);
+      console.log(`VM reboot requested: ${profile.name}`);
+      return;
+    case 'destroy':
+      await backend.destroy(profile, paths);
+      console.log(`VM destroyed: ${profile.name}`);
+      return;
+    case 'status':
+      console.log(await backend.status(profile, paths));
+      return;
+    default:
+      throw new Error(`unknown vmctl command: ${command}`);
+  }
 }
 
 const direct = process.argv[1] !== undefined && import.meta.filename === process.argv[1];
