@@ -1,6 +1,6 @@
 /** Typed provisioning configuration with decision-log defaults. */
 import { resourceBudgetCheck } from './resource-budget.ts';
-import { boolean_, hostname_, integer_, maybe, object_, oneOf, port_, refine, string_, unixUser_, withDefault, type Infer } from './validate.ts';
+import { array_, boolean_, hostname_, integer_, maybe, object_, oneOf, port_, refine, string_, unixUser_, withDefault, type Infer } from './validate.ts';
 export const FORBIDDEN_PUBLIC_PORTS = [2375,2376,5432,6379,8200,8201] as const;
 const text = (fallback: string) => withDefault(string_({ minLength: 1, maxLength: 200 }), fallback);
 export const provisionConfigCheck = refine(object_({
@@ -9,7 +9,7 @@ export const provisionConfigCheck = refine(object_({
   target: object_({ host: hostname_(), initialUser: withDefault(unixUser_(), 'root'), initialSshPort: withDefault(port_(), 22), finalSshPort: withDefault(port_(), 5564), adminUser: withDefault(unixUser_(), 'lumiadmin'), deployUser: withDefault(unixUser_(), 'lumideploy'), hostnameOverride: maybe(hostname_()), knownHostsPath: maybe(string_({ minLength: 1 })), identityPath: maybe(string_({ minLength: 1 })), keyDirectory: text('.secrets/keys') }),
   os: object_({ distro: withDefault(oneOf(['ubuntu']), 'ubuntu'), timezone: text('UTC') }),
   preflight: object_({ minCpuCores: withDefault(integer_({ min: 1 }), 2), minMemoryMiB: withDefault(integer_({ min: 256 }), 1900), minDiskGiB: withDefault(integer_({ min: 5 }), 20), allowResourceShortage: withDefault(boolean_(), false) }),
-  security: object_({ sshMaxAuthTries: withDefault(integer_({ min: 1, max: 6 }), 3), sshIdleTimeoutMinutes: withDefault(integer_({ min: 1, max: 120 }), 15), sshMaxSessions: withDefault(integer_({ min: 1, max: 10 }), 3), allowAgentForwarding: withDefault(boolean_(), false), allowTcpForwarding: withDefault(boolean_(), false), allowX11Forwarding: withDefault(boolean_(), false), passwordAuthentication: withDefault(boolean_(), false), permitRootLogin: withDefault(oneOf(['yes','no','prohibit-password']), 'no'), publicPorts: withDefault((awaitablePorts()), [80,443]) }),
+  security: object_({ sshMaxAuthTries: withDefault(integer_({ min: 1, max: 6 }), 3), sshIdleTimeoutMinutes: withDefault(integer_({ min: 1, max: 120 }), 15), sshMaxSessions: withDefault(integer_({ min: 1, max: 10 }), 3), allowAgentForwarding: withDefault(boolean_(), false), allowTcpForwarding: withDefault(boolean_(), false), allowX11Forwarding: withDefault(boolean_(), false), passwordAuthentication: withDefault(boolean_(), false), permitRootLogin: withDefault(oneOf(['yes','no','prohibit-password']), 'no'), publicPorts: withDefault(array_(port_()), [80,443]) }),
   swap: object_({ sizeMiB: withDefault(integer_({ min: 0 }), 2048), swappiness: withDefault(integer_({ min: 0, max: 100 }), 10) }),
   openbao: object_({ version: text('2.2.0'), tls: withDefault(boolean_(), true), unsealMode: withDefault(oneOf(['transit','kms','manual']), 'transit'), transitEndpoint: maybe(string_({ minLength: 8 })), kmsKeyId: maybe(string_({ minLength: 4 })) }),
   budget: resourceBudgetCheck,
@@ -22,6 +22,5 @@ export const provisionConfigCheck = refine(object_({
   if (config.openbao.unsealMode === 'kms' && config.openbao.kmsKeyId === undefined) return 'openbao.kmsKeyId is required for KMS unseal';
   return undefined;
 });
-function awaitablePorts() { return (await import('../config/validate.ts')).array_(port_()); }
 export type ProvisionConfig = Infer<typeof provisionConfigCheck>;
 export type EnvironmentName = 'production' | 'staging';
