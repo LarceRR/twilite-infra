@@ -5,12 +5,11 @@ services:
     image: postgres:16.4@sha256:REPLACE_WITH_REVIEWED_DIGEST
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_SUPERUSER:?set in secret environment}
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_superuser_password
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:?set in protected environment}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_admin_secret
       POSTGRES_DB: postgres
       PGDATA: /var/lib/postgresql/data/pgdata
-    secrets:
-      - postgres_superuser_password
+    secrets: [db_admin_secret]
     command: ["postgres", "-c", "archive_mode=on", "-c", "archive_timeout=60s", "-c", "wal_level=replica", "-c", "max_connections=80"]
     volumes: ["postgres_data:/var/lib/postgresql/data"]
     networks: [infra_net, prod_net, stage_net]
@@ -71,7 +70,7 @@ networks:
   stage_net: { name: lumi_stage_net }
 
 secrets:
-  postgres_superuser_password:
-    file: ${POSTGRES_SUPERUSER_PASSWORD_FILE:?set to a root-only local secret path}
+  db_admin_secret:
+    file: ${DB_ADMIN_SECRET_FILE:?set to a root-only local secret path}
   redis_acl:
     file: ${REDIS_ACL_FILE:?set to a root-only local secret path}

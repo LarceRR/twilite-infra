@@ -51,11 +51,13 @@ test('Compose keeps secrets as Docker secrets and not inline values', () => {
 test('OpenBao policy files isolate production and staging paths', () => {
   const prod = read('infra/openbao/policies/production-api.hcl');
   const stage = read('infra/openbao/policies/staging-api.hcl');
+  const openbao = read('infra/openbao/config/openbao.hcl');
   match(prod, /secret\/data\/production\/api/);
   match(stage, /secret\/data\/staging\/api/);
   strictEqual(prod.includes('staging'), false);
   strictEqual(stage.includes('production'), false);
-  strictEqual(read('infra/openbao/config/openbao.hcl'), /storage "raft"/.test(read('infra/openbao/config/openbao.hcl')) ? read('infra/openbao/config/openbao.hcl') : '');
+  match(openbao, /storage "raft"/);
+  match(openbao, /tls_min_version = "tls13"/);
 });
 
 test('deployment requires digest, separates migration and readiness gates', () => {
