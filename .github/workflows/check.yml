@@ -13,7 +13,7 @@ jobs:
           node-version: '22.18.0'
       - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm run typecheck
-      - name: Run unit files with direct output
+      - name: Run unit files with diagnostics
         shell: bash
         run: |
           set -uo pipefail
@@ -21,6 +21,13 @@ jobs:
           failed=0
           for test_file in "${tests[@]}"; do
             echo "===== $test_file ====="
-            node --test --test-reporter=spec "$test_file" || failed=1
+            output="$(node --test --test-reporter=spec "$test_file" 2>&1)"
+            status=$?
+            printf '%s\n' "$output"
+            if (( status != 0 )); then
+              compact="$(printf '%s' "$output" | tr '\n' ' ' | cut -c1-5000)"
+              echo "::error title=Unit failure::$test_file: $compact"
+              failed=1
+            fi
           done
           exit "$failed"
