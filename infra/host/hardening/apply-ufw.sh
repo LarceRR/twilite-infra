@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 SSH_PORT="${TWILITE_SSH_PORT:-5564}"
+PUBLIC_PORTS="${TWILITE_PUBLIC_PORTS:-}"
 RESET="${TWILITE_FIREWALL_RESET:-0}"
 IPV6="${TWILITE_IPV6:-no}"
 
@@ -20,7 +21,9 @@ ufw default deny incoming
 ufw default allow outgoing
 ufw delete allow 22/tcp >/dev/null 2>&1 || true
 ufw allow "$SSH_PORT"/tcp comment 'twilite ssh'
-ufw allow 80/tcp comment 'twilite http'
-ufw allow 443/tcp comment 'twilite https'
+for port in $PUBLIC_PORTS; do
+  [[ "$port" =~ ^[0-9]+$ ]] && (( port >= 1 && port <= 65535 )) || { echo "invalid public port: $port" >&2; exit 2; }
+  [[ "$port" != "$SSH_PORT" ]] && ufw allow "$port"/tcp comment 'twilite public'
+done
 ufw --force enable
 ufw status verbose
