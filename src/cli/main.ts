@@ -1,0 +1,12 @@
+#!/usr/bin/env node
+import { execFileSync } from 'node:child_process';
+import { loadConfigFile } from '../core/config/load.ts';
+import { formatBudget } from '../core/config/resource-budget.ts';
+import { PHASES } from '../core/state/types.ts';
+import { CLI_VERSION } from '../core/version.ts';
+import { ExitCode, type ExitCodeValue } from './exit-codes.ts';
+const usage = `twilite-infra <command>\n\ncommands: plan, provision, resume, status, report, reset, doctor, version\noptions: --config <path>, --dry-run, --yes, --json\n`;
+function value(argv: readonly string[], flag: string): string | undefined { const index = argv.indexOf(flag); return index < 0 ? undefined : argv[index + 1]; }
+export function main(argv: readonly string[]): ExitCodeValue { const command = argv[0] ?? 'help'; if (command === 'help' || command === '--help') { process.stdout.write(usage); return ExitCode.ok; } if (command === 'version' || command === '--version') { process.stdout.write(`${CLI_VERSION}\n`); return ExitCode.ok; } if (command === 'doctor') { const checks = [process.versions.node.startsWith('22.'), hasBinary('ssh')]; const payload = { node: process.version, ssh: checks[1], wsl2: process.platform === 'linux' }; process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`); return checks.every(Boolean) ? ExitCode.ok : ExitCode.failed; } const configPath = value(argv, '--config'); if (configPath === undefined) { process.stderr.write(`${usage}missing --config\n`); return ExitCode.usage; } const resolved = loadConfigFile(configPath); if (!resolved.ok) { process.stderr.write(`${resolved.error.code}: ${resolved.error.message}\n`); return ExitCode.config; } if (command === 'plan' || argv.includes('--dry-run')) { process.stdout.write(`target: ${resolved.value.config.label}@${resolved.value.config.target.host}\n`); process.stdout.write(`phases: ${PHASES.join(' -> ')}\n`); for (const line of formatBudget(resolved.value.config.budget)) process.stdout.write(`${line}\n`); process.stdout.write(`fingerprint: ${resolved.value.fingerprint}\n`); return ExitCode.ok; } process.stdout.write('Runtime steps are intentionally gated until their phase is implemented. Use plan or --dry-run.\n'); return ExitCode.ok; }
+function hasBinary(binary: string): boolean { try { execFileSync(binary, ['-V'], { stdio: 'ignore', timeout: 5000 }); return true; } catch { return false; } }
+const direct = process.argv[1] !== undefined && import.meta.filename === process.argv[1]; if (direct) process.exitCode = main(process.argv.slice(2));
