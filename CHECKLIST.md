@@ -10,7 +10,7 @@ Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Ph
 | 1 CLI foundation | 12% | foundation in PR #1 |
 | 2 Linux VM harness | 10% | implementation in PR #2, gate pending |
 | 3 SSH/bootstrap | 10% | implementation in PR #3, VM gate pending |
-| 4 OS/security | 9% | pending |
+| 4 OS/security | 9% | implementation in PR #4, VM gate pending |
 | 5 Docker/runtime | 9% | pending |
 | 6 OpenBao | 8% | pending |
 | 7 Application deployment | 8% | pending |
@@ -20,36 +20,28 @@ Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Ph
 | 11 Full DR | 6% | pending |
 | 12 Scaling simulation | 4% | pending |
 
-**Honest status: Phase 3 code is implemented and unit-tested; its acceptance gate is not passed until the real systemd/SSH Ubuntu VM runs the full bootstrap, interruption and reboot checks.**
+**Honest status: Phase 4 files and renderers are implemented and unit-tested; the VM acceptance gate is not passed until the real systemd Ubuntu VM proves exposure, reboot/idempotency and security behavior.**
 
-## Phase 2: Linux VM harness
+## Phase 4: OS and security baseline
 
-- [x] 2.1 QEMU/KVM backend inside WSL2; backend interface is pluggable.
-- [x] 2.2 `/dev/kvm` detection and explicit TCG degraded mode.
-- [x] 2.3 Ubuntu 24.04 cloud image download with official SHA256 verification.
-- [x] 2.4 Ephemeral create/start/stop/reboot/reset/destroy lifecycle primitives.
-- [x] 2.5 cloud-init seed with a throwaway Ed25519 key and Ubuntu test user.
-- [ ] 2.6 Clean snapshot reset, guest SSH readiness, console/SSH artifact collector.
-- [ ] 2.7 Full acceptance command sequence on a real VM, including reboot and repeat-from-clean.
+- [x] 4.1 Package baseline and full-upgrade script.
+- [x] 4.2 UTC/NTP service enablement and reboot-safe systemd dependency.
+- [x] 4.3 Explicit swap settings remain typed from Phase 1.
+- [x] 4.4 UFW deny-in/allow-out with inventory-driven public ports.
+- [x] 4.5 Fail2ban SSH jail using systemd journal and nftables.
+- [x] 4.6 Journald retention and size caps.
+- [x] 4.7 Docker Engine installation script and Unix-socket-only daemon policy.
+- [x] 4.8 Docker log rotation, live-restore and systemd drop-in.
+- [x] 4.9 Unattended security updates with automatic reboot disabled.
+- [x] 4.10 AppArmor/auditd package and verification checks.
+- [x] 4.11 Explicit IPv6 policy and measured sysctl baseline.
+- [x] 4.12 Typed renderers and unit tests for negative exposure cases.
+- [ ] 4.13 Reboot detection/reconnect integration test on real VM.
+- [ ] 4.14 External port scan shows only intended public services.
+- [ ] 4.15 Second provisioning run is idempotent on real VM.
 
-**Gate:** real VM acceptance run is repeatable from Windows via WSL2 with no manual SSH repair. TCG can prove functional behavior only, never performance or RTO.
+**Gate:** external/VM-side scan shows only intended public services; second provisioning run produces no unintended changes.
 
-## Phase 3: SSH/bootstrap
+## Phase 5 through 12
 
-- [x] 3.1 OpenSSH transport with `BatchMode`, strict `known_hosts`, ControlMaster and argv-only process construction.
-- [x] 3.2 Mandatory process timeouts, cancellation, exit classification and atomic remote writes.
-- [x] 3.3 Initial access probe and admin user creation path.
-- [x] 3.4 Host fingerprint capture and explicit trust function.
-- [x] 3.5 Ed25519 admin key generation, collision-safe names and private mode validation.
-- [x] 3.6 Admin authorized key and sudoers installation rendering.
-- [x] 3.7 Verify admin SSH + sudo before access-changing hardening.
-- [x] 3.8 Transitional new-port policy, final-port verification, then root SSH disable.
-- [x] 3.9 SSH hardening renderer for MaxAuthTries, idle timeout, MaxSessions, forwarding, passwords and root login.
-- [ ] 3.10 Interrupted bootstrap acceptance test on the real VM.
-- [ ] 3.11 Final admin path survives VM reboot acceptance test.
-
-**Gate:** fresh VM stays reachable through the final admin path after every hardening step and after reboot.
-
-## Phase 4 through 12
-
-Separate PRs implement OS hardening, Docker/Compose, OpenBao, deployment/rollback, pgBackRest/PITR, monitoring, chaos, DR and scaling. No real VPS before local acceptance, chaos and DR gates pass twice (D10).
+Separate PRs implement Docker/Compose runtime isolation, OpenBao, deployment/rollback, pgBackRest/PITR, monitoring, chaos, DR and scaling. No real VPS before local acceptance, chaos and DR gates pass twice (D10).

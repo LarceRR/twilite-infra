@@ -1,12 +1,14 @@
-.PHONY: help check typecheck test unit test:vm:doctor test:vm:create test:vm:provision test:vm:chaos test:vm:collect test:vm:destroy
+.PHONY: help check typecheck test unit test:vm:doctor test:vm:create test:vm:provision test:vm:chaos test:vm:collect test:vm:destroy test:os-security
 help:
-	@printf '%s\n' 'make check | make test:vm:doctor | make test:vm:create | make test:vm:provision | make test:vm:chaos CASE=api-kill | make test:vm:collect | make test:vm:destroy'
+	@printf '%s\n' 'make check | make test:os-security | make test:vm:doctor | make test:vm:create | make test:vm:provision | make test:vm:chaos CASE=api-kill | make test:vm:collect | make test:vm:destroy'
 check:
 	npm run check
 typecheck:
 	npm run typecheck
 unit:
 	npm run test:unit
+test:os-security:
+	node --test --test-reporter=spec test/unit/os-security.test.ts
 test:vm:doctor:
 	node src/harness/vmctl/main.ts doctor
 test:vm:create:
