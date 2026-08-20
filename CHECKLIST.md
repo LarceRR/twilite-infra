@@ -6,10 +6,10 @@ Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Ph
 
 | Phase | Weight | Status |
 |---|---:|---|
-| 0 Repository and engineering foundation | 4% | done after PR #1 checks pass |
-| 1 CLI foundation | 12% | done after PR #1 checks pass |
-| 2 Linux VM harness | 10% | implementation in progress, gate not passed |
-| 3 SSH/bootstrap | 10% | next |
+| 0 Repository and engineering foundation | 4% | foundation in PR #1 |
+| 1 CLI foundation | 12% | foundation in PR #1 |
+| 2 Linux VM harness | 10% | implementation in PR #2, gate pending |
+| 3 SSH/bootstrap | 10% | implementation in PR #3, VM gate pending |
 | 4 OS/security | 9% | pending |
 | 5 Docker/runtime | 9% | pending |
 | 6 OpenBao | 8% | pending |
@@ -20,7 +20,7 @@ Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Ph
 | 11 Full DR | 6% | pending |
 | 12 Scaling simulation | 4% | pending |
 
-**Honest status: Phase 0/1 code is in PR #1. Phase 2 is not called complete until a real Ubuntu VM boots and the lifecycle is repeated from WSL2.**
+**Honest status: Phase 3 code is implemented and unit-tested; its acceptance gate is not passed until the real systemd/SSH Ubuntu VM runs the full bootstrap, interruption and reboot checks.**
 
 ## Phase 2: Linux VM harness
 
@@ -34,6 +34,22 @@ Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Ph
 
 **Gate:** real VM acceptance run is repeatable from Windows via WSL2 with no manual SSH repair. TCG can prove functional behavior only, never performance or RTO.
 
-## Phase 3 through 12
+## Phase 3: SSH/bootstrap
 
-Separate PRs implement SSH/bootstrap, OS hardening, Docker/Compose, OpenBao, deployment/rollback, pgBackRest/PITR, monitoring, chaos, DR and scaling. No real VPS before local acceptance, chaos and DR gates pass twice (D10).
+- [x] 3.1 OpenSSH transport with `BatchMode`, strict `known_hosts`, ControlMaster and argv-only process construction.
+- [x] 3.2 Mandatory process timeouts, cancellation, exit classification and atomic remote writes.
+- [x] 3.3 Initial access probe and admin user creation path.
+- [x] 3.4 Host fingerprint capture and explicit trust function.
+- [x] 3.5 Ed25519 admin key generation, collision-safe names and private mode validation.
+- [x] 3.6 Admin authorized key and sudoers installation rendering.
+- [x] 3.7 Verify admin SSH + sudo before access-changing hardening.
+- [x] 3.8 Transitional new-port policy, final-port verification, then root SSH disable.
+- [x] 3.9 SSH hardening renderer for MaxAuthTries, idle timeout, MaxSessions, forwarding, passwords and root login.
+- [ ] 3.10 Interrupted bootstrap acceptance test on the real VM.
+- [ ] 3.11 Final admin path survives VM reboot acceptance test.
+
+**Gate:** fresh VM stays reachable through the final admin path after every hardening step and after reboot.
+
+## Phase 4 through 12
+
+Separate PRs implement OS hardening, Docker/Compose, OpenBao, deployment/rollback, pgBackRest/PITR, monitoring, chaos, DR and scaling. No real VPS before local acceptance, chaos and DR gates pass twice (D10).
