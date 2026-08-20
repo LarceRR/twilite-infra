@@ -1,35 +1,31 @@
 import type { SshTarget, SshTransportOptions } from './types.ts';
 import { assertSafeSshToken } from './util.ts';
 
-export function buildSshArgs(target: SshTarget, command: readonly string[], options: SshTransportOptions = {}): readonly string[] {
+function commonOptions(target: SshTarget, options: SshTransportOptions): string[] {
   assertSafeSshToken(target.host, 'host');
   assertSafeSshToken(target.user, 'user');
   assertSafeSshToken(target.identityFile, 'identityFile');
   assertSafeSshToken(target.knownHostsFile, 'knownHostsFile');
   assertSafeSshToken(target.controlPath, 'controlPath');
-  const connectTimeout = options.connectTimeoutSeconds ?? 10;
-  const aliveInterval = options.serverAliveIntervalSeconds ?? 15;
-  const aliveCount = options.serverAliveCountMax ?? 3;
   if (!Number.isInteger(target.port) || target.port < 1 || target.port > 65535) throw new Error('SSH port must be 1..65535');
-  const args: string[] = [
-    '-p', String(target.port),
-    '-i', target.identityFile,
-    '-o', 'BatchMode=yes',
-    '-o', 'StrictHostKeyChecking=yes',
+  return [
+    '-p', String(target.port), '-i', target.identityFile,
+    '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes',
     '-o', `UserKnownHostsFile=${target.knownHostsFile}`,
-    '-o', 'ControlMaster=auto',
-    '-o', 'ControlPersist=60',
+    '-o', 'ControlMaster=auto', '-o', 'ControlPersist=60',
     '-o', `ControlPath=${target.controlPath}`,
-    '-o', `ConnectTimeout=${connectTimeout}`,
-    '-o', `ServerAliveInterval=${aliveInterval}`,
-    '-o', `ServerAliveCountMax=${aliveCount}`,
-    `${target.user}@${target.host}`,
+    '-o', `ConnectTimeout=${options.connectTimeoutSeconds ?? 10}`,
+    '-o', `ServerAliveInterval=${options.serverAliveIntervalSeconds ?? 15}`,
+    '-o', `ServerAliveCountMax=${options.serverAliveCountMax ?? 3}`,
   ];
-  return [...args, ...command];
+}
+
+export function buildSshArgs(target: SshTarget, command: readonly string[], options: SshTransportOptions = {}): readonly string[] {
+  return [...commonOptions(target, options), `${target.user}@${target.host}`, ...command];
 }
 
 export function buildControlCloseArgs(target: SshTarget, options: SshTransportOptions = {}): readonly string[] {
-  return buildSshArgs(target, ['-O', 'exit'], options);
+  return [...commonOptions(target, options), '-O', 'exit', `${target.user}@${target.host}`];
 }
 
 export function buildKeyscanArgs(host: string, port: number, timeoutSeconds = 10): readonly string[] {
