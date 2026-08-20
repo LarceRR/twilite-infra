@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate immutable release
         env: { API_IMAGE_DIGEST: ${{ inputs.image_digest }}, RELEASE_SHA: ${{ inputs.release_sha }}, API_IMAGE_REFERENCE: ${{ vars.API_IMAGE_REPOSITORY }} }
-        run: infra/deploy/validate-release.sh
+        run: bash infra/deploy/validate-release.sh
       - name: Install deployment key
         env: { DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }} }
         run: |
@@ -38,7 +38,7 @@ jobs:
       - name: Deploy staging remotely
         env: { DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}, DEPLOY_USER: ${{ vars.DEPLOY_USER }}, API_IMAGE_REPOSITORY: ${{ vars.API_IMAGE_REPOSITORY }}, API_IMAGE_DIGEST: ${{ inputs.image_digest }}, RELEASE_SHA: ${{ inputs.release_sha }}, SMOKE_URL: ${{ secrets.STAGING_SMOKE_URL }} }
         run: |
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" "$DEPLOY_USER@$DEPLOY_HOST" "sudo env DEPLOY_ENV=staging DEPLOY_ROOT=/opt/twilite-infra API_IMAGE_REPOSITORY='$API_IMAGE_REPOSITORY' API_IMAGE_DIGEST='$API_IMAGE_DIGEST' RELEASE_SHA='$RELEASE_SHA' STATE_DIR=/var/lib/twilite-deploy/staging SMOKE_URL='$SMOKE_URL' /opt/twilite-infra/infra/deploy/deploy.sh"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" "$DEPLOY_USER@$DEPLOY_HOST" "sudo env DEPLOY_ENV=staging DEPLOY_ROOT=/opt/twilite-infra API_IMAGE_REPOSITORY='$API_IMAGE_REPOSITORY' API_IMAGE_DIGEST='$API_IMAGE_DIGEST' RELEASE_SHA='$RELEASE_SHA' STATE_DIR=/var/lib/twilite-deploy/staging SMOKE_URL='$SMOKE_URL' bash /opt/twilite-infra/infra/deploy/deploy.sh"
 
   production:
     needs: staging
@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate immutable release
         env: { API_IMAGE_DIGEST: ${{ inputs.image_digest }}, RELEASE_SHA: ${{ inputs.release_sha }}, API_IMAGE_REFERENCE: ${{ vars.API_IMAGE_REPOSITORY }} }
-        run: infra/deploy/validate-release.sh
+        run: bash infra/deploy/validate-release.sh
       - name: Install deployment key
         env: { DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }} }
         run: |
@@ -62,4 +62,4 @@ jobs:
       - name: Deploy production after environment approval
         env: { DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}, DEPLOY_USER: ${{ vars.DEPLOY_USER }}, API_IMAGE_REPOSITORY: ${{ vars.API_IMAGE_REPOSITORY }}, API_IMAGE_DIGEST: ${{ inputs.image_digest }}, RELEASE_SHA: ${{ inputs.release_sha }}, SMOKE_URL: ${{ secrets.PRODUCTION_SMOKE_URL }} }
         run: |
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" "$DEPLOY_USER@$DEPLOY_HOST" "sudo env DEPLOY_ENV=production DEPLOY_ROOT=/opt/twilite-infra API_IMAGE_REPOSITORY='$API_IMAGE_REPOSITORY' API_IMAGE_DIGEST='$API_IMAGE_DIGEST' RELEASE_SHA='$RELEASE_SHA' STATE_DIR=/var/lib/twilite-deploy/production SMOKE_URL='$SMOKE_URL' /opt/twilite-infra/infra/deploy/deploy.sh"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" "$DEPLOY_USER@$DEPLOY_HOST" "sudo env DEPLOY_ENV=production DEPLOY_ROOT=/opt/twilite-infra API_IMAGE_REPOSITORY='$API_IMAGE_REPOSITORY' API_IMAGE_DIGEST='$API_IMAGE_DIGEST' RELEASE_SHA='$RELEASE_SHA' STATE_DIR=/var/lib/twilite-deploy/production SMOKE_URL='$SMOKE_URL' bash /opt/twilite-infra/infra/deploy/deploy.sh"
