@@ -17,20 +17,15 @@ listener "tcp" {
   tls_min_version = "tls13"
 }
 
-# Local drills use Transit outside the VM (D3). Production replaces this stanza
-# with the approved external KMS configuration. The token is rendered from
-# recovered secret material and never committed to this repository.
+# Local drills use Transit outside the VM (D3). Production replaces this
+# commented template with the approved external KMS configuration. The token
+# is rendered from recovered secret material and never committed.
 # seal "transit" {
 #   address         = "https://transit.example.invalid:8200"
 #   key_name        = "twilite-unseal"
 #   mount_path      = "transit/"
 #   disable_renewal = "false"
 # }
-
-audit {
-  type = "file"
-  path = "/openbao/data/audit.log"
-}
 
 telemetry {
   disable_hostname = true

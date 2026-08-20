@@ -23,33 +23,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate immutable release
-        env:
-          API_IMAGE_DIGEST: ${{ inputs.image_digest }}
-          RELEASE_SHA: ${{ inputs.release_sha }}
+        env: { API_IMAGE_DIGEST: ${{ inputs.image_digest }}, RELEASE_SHA: ${{ inputs.release_sha }}, API_IMAGE_REFERENCE: ${{ vars.API_IMAGE_REPOSITORY }} }
         run: infra/deploy/validate-release.sh
       - name: Install deployment key
-        env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        env: { DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }} }
         run: |
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/twilite_deploy"
           chmod 600 "$HOME/.ssh/twilite_deploy"
-      - name: Copy deployment contract
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-        run: scp -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" infra/deploy/deploy.sh "$DEPLOY_USER@$DEPLOY_HOST:/tmp/twilite-deploy.sh"
-      - name: Deploy staging remotely
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-          API_IMAGE_REPOSITORY: ${{ vars.API_IMAGE_REPOSITORY }}
-          API_IMAGE_DIGEST: ${{ inputs.image_digest }}
-          RELEASE_SHA: ${{ inputs.release_sha }}
-          SMOKE_URL: ${{ secrets.STAGING_SMOKE_URL }}
+      - name: Sync deployment contract
+        env: { DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}, DEPLOY_USER: ${{ vars.DEPLOY_USER }} }
         run: |
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "sudo install -m 0750 /tmp/twilite-deploy.sh /usr/local/sbin/twilite-deploy && sudo env DEPLOY_ENV=staging API_IMAGE_REPOSITORY='$API_IMAGE_REPOSITORY' API_IMAGE_DIGEST='$API_IMAGE_DIGEST' RELEASE_SHA='$RELEASE_SHA' STATE_DIR=/var/lib/twilite-deploy/staging SMOKE_URL='$SMOKE_URL' /usr/local/sbin/twilite-deploy"
+          tar -czf - infra/compose infra/deploy | ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" "$DEPLOY_USER@$DEPLOY_HOST" 'sudo mkdir -p /opt/twilite-infra && sudo tar -xzf - -C /opt/twilite-infra'
+      - name: Deploy staging remotely
+        env: { DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}, DEPLOY_USER: ${{ vars.DEPLOY_USER }}, API_IMAGE_REPOSITORY: ${{ vars.API_IMAGE_REPOSITORY }}, API_IMAGE_DIGEST: ${{ inputs.image_digest }}, RELEASE_SHA: ${{ inputs.release_sha }}, SMOKE_URL: ${{ secrets.STAGING_SMOKE_URL }} }
+        run: |
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" "$DEPLOY_USER@$DEPLOY_HOST" "sudo env DEPLOY_ENV=staging DEPLOY_ROOT=/opt/twilite-infra API_IMAGE_REPOSITORY='$API_IMAGE_REPOSITORY' API_IMAGE_DIGEST='$API_IMAGE_DIGEST' RELEASE_SHA='$RELEASE_SHA' STATE_DIR=/var/lib/twilite-deploy/staging SMOKE_URL='$SMOKE_URL' /opt/twilite-infra/infra/deploy/deploy.sh"
 
   production:
     needs: staging
@@ -58,30 +47,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate immutable release
-        env:
-          API_IMAGE_DIGEST: ${{ inputs.image_digest }}
-          RELEASE_SHA: ${{ inputs.release_sha }}
+        env: { API_IMAGE_DIGEST: ${{ inputs.image_digest }}, RELEASE_SHA: ${{ inputs.release_sha }}, API_IMAGE_REFERENCE: ${{ vars.API_IMAGE_REPOSITORY }} }
         run: infra/deploy/validate-release.sh
       - name: Install deployment key
-        env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        env: { DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }} }
         run: |
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/twilite_deploy"
           chmod 600 "$HOME/.ssh/twilite_deploy"
-      - name: Copy deployment contract
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-        run: scp -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" infra/deploy/deploy.sh "$DEPLOY_USER@$DEPLOY_HOST:/tmp/twilite-deploy.sh"
-      - name: Production approval gate and deploy
-        env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-          API_IMAGE_REPOSITORY: ${{ vars.API_IMAGE_REPOSITORY }}
-          API_IMAGE_DIGEST: ${{ inputs.image_digest }}
-          RELEASE_SHA: ${{ inputs.release_sha }}
-          SMOKE_URL: ${{ secrets.PRODUCTION_SMOKE_URL }}
+      - name: Sync deployment contract
+        env: { DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}, DEPLOY_USER: ${{ vars.DEPLOY_USER }} }
         run: |
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "sudo install -m 0750 /tmp/twilite-deploy.sh /usr/local/sbin/twilite-deploy && sudo env DEPLOY_ENV=production API_IMAGE_REPOSITORY='$API_IMAGE_REPOSITORY' API_IMAGE_DIGEST='$API_IMAGE_DIGEST' RELEASE_SHA='$RELEASE_SHA' STATE_DIR=/var/lib/twilite-deploy/production SMOKE_URL='$SMOKE_URL' /usr/local/sbin/twilite-deploy"
+          tar -czf - infra/compose infra/deploy | ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" "$DEPLOY_USER@$DEPLOY_HOST" 'sudo mkdir -p /opt/twilite-infra && sudo tar -xzf - -C /opt/twilite-infra'
+      - name: Deploy production after environment approval
+        env: { DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}, DEPLOY_USER: ${{ vars.DEPLOY_USER }}, API_IMAGE_REPOSITORY: ${{ vars.API_IMAGE_REPOSITORY }}, API_IMAGE_DIGEST: ${{ inputs.image_digest }}, RELEASE_SHA: ${{ inputs.release_sha }}, SMOKE_URL: ${{ secrets.PRODUCTION_SMOKE_URL }} }
+        run: |
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/twilite_deploy" "$DEPLOY_USER@$DEPLOY_HOST" "sudo env DEPLOY_ENV=production DEPLOY_ROOT=/opt/twilite-infra API_IMAGE_REPOSITORY='$API_IMAGE_REPOSITORY' API_IMAGE_DIGEST='$API_IMAGE_DIGEST' RELEASE_SHA='$RELEASE_SHA' STATE_DIR=/var/lib/twilite-deploy/production SMOKE_URL='$SMOKE_URL' /opt/twilite-infra/infra/deploy/deploy.sh"
