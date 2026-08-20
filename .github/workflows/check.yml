@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.18.0'
-          cache: npm
-      - run: npm ci
+          cache: false
+      - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run test:unit

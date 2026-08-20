@@ -1,0 +1,6 @@
+{
+  "label": "lumiapp-local-vm",
+  "target": { "host": "127.0.0.1", "initialSshPort": 2222 },
+  "security": { "publicPorts": [] },
+  "openbao": { "unsealMode": "manual" }
+}
