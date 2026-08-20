@@ -15,13 +15,7 @@ export const provisionConfigCheck = refine(object_({
   openbao: object_({ version: text('2.2.0'), tls: withDefault(boolean_(), true), unsealMode: withDefault(oneOf(['transit','kms','manual']), 'transit'), transitEndpoint: maybe(string_({ minLength: 8 })), kmsKeyId: maybe(string_({ minLength: 4 })) }),
   budget: resourceBudgetCheck,
   behavior: object_({ stepTimeoutMs: withDefault(integer_({ min: 1000 }), 120000), confirmBeforeChanges: withDefault(boolean_(), true) })
-}), (config) => {
-  const exposed = config.security.publicPorts.filter((port) => (FORBIDDEN_PUBLIC_PORTS as readonly number[]).includes(port));
-  if (exposed.length > 0) return `security.publicPorts must never expose infrastructure ports: ${exposed.join(', ')}`;
-  if (config.security.publicPorts.includes(config.target.finalSshPort)) return 'security.publicPorts must not repeat the SSH port';
-  if (config.openbao.unsealMode === 'transit' && config.openbao.transitEndpoint === undefined) return 'openbao.transitEndpoint is required for transit unseal';
-  if (config.openbao.unsealMode === 'kms' && config.openbao.kmsKeyId === undefined) return 'openbao.kmsKeyId is required for KMS unseal';
-  return undefined;
-});
+}), (config) => { const exposed = config.security.publicPorts.filter((port) => (FORBIDDEN_PUBLIC_PORTS as readonly number[]).includes(port)); if (exposed.length > 0) return `security.publicPorts must never expose infrastructure ports: ${exposed.join(', ')}`; if (config.security.publicPorts.includes(config.target.finalSshPort)) return 'security.publicPorts must not repeat the SSH port'; if (config.openbao.unsealMode === 'transit' && config.openbao.transitEndpoint === undefined) return 'openbao.transitEndpoint is required for transit unseal'; if (config.openbao.unsealMode === 'kms' && config.openbao.kmsKeyId === undefined) return 'openbao.kmsKeyId is required for KMS unseal'; return undefined; });
 export type ProvisionConfig = Infer<typeof provisionConfigCheck>;
+export type SecurityConfig = ProvisionConfig['security'];
 export type EnvironmentName = 'production' | 'staging';
