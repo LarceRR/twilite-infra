@@ -1,0 +1,17 @@
+import { match, ok, strictEqual } from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+import { resolveConfig } from '../../src/core/config/load.ts';
+import { renderDockerDaemonConfig } from '../../src/core/security/baseline.ts';
+const read = (path: string): string => readFileSync(path, 'utf8');
+const base = read('infra/compose/base/compose.yaml');
+const prod = read('infra/compose/production/compose.yaml');
+const stage = read('infra/compose/staging/compose.yaml');
+const deploy = read('infra/deploy/deploy.sh');
+const rollback = read('infra/deploy/rollback.sh');
+test('Compose isolates production and staging networks', () => { match(prod, /name: \$\{PROD_PROJECT_NAME/); match(stage, /name: \$\{STAGE_PROJECT_NAME/); match(prod, /lumi_prod_net/); match(stage, /lumi_stage_net/); strictEqual(prod.includes('lumi_stage_net'), false); strictEqual(stage.includes('lumi_prod_net'), false); });
+test('Compose pins images and enforces resource/restart/health policy', () => { for (const text of [base, prod, stage]) { match(text, /image: .*@sha256:/); match(text, /restart: unless-stopped/); match(text, /healthcheck:/); } match(prod, /mem_limit: 384m/); match(stage, /mem_limit: 192m/); match(base, /mem_limit: 384m/); match(base, /mem_limit: 96m/); strictEqual(prod.includes(':latest'), false); strictEqual(stage.includes(':latest'), false); });
+test('Compose uses secret files instead of inline credentials', () => { match(prod, /prod_database_url/); match(stage, /stage_smoke_credential/); strictEqual(prod.includes('PASSWORD='), false); strictEqual(stage.includes('TOKEN='), false); });
+test('OpenBao uses Raft TLS and disjoint policy paths', () => { const p = read('infra/openbao/policies/production-api.hcl'); const s = read('infra/openbao/policies/staging-api.hcl'); const c = read('infra/openbao/config/openbao.hcl'); match(p, /production\/api/); match(s, /staging\/api/); strictEqual(p.includes('staging'), false); strictEqual(s.includes('production'), false); match(c, /storage "raft"/); match(c, /tls_min_version = "tls13"/); });
+test('Deployment requires immutable release and separate migration/readiness/smoke gates', () => { match(deploy, /API_IMAGE_DIGEST.*sha256/); match(deploy, /docker pull/); match(deploy, /\/app\/bin\/migrate/); match(deploy, /health.*healthy/); match(deploy, /curl --fail/); match(deploy, /previous\.digest/); match(rollback, /previous\.digest/); strictEqual(deploy.includes('latest'), false); });
+test('Docker remains Unix-socket-only', () => { const r = resolveConfig({ target: { host: '127.0.0.1' }, security: { publicPorts: [] }, openbao: { unsealMode: 'manual' } }, 'test'); ok(r.ok); if (!r.ok) return; const text = renderDockerDaemonConfig(r.value.config); match(text, /unix:\/\/\/var\/run\/docker\.sock/); strictEqual(text.includes('tcp://'), false); });
