@@ -6,9 +6,9 @@ Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Ph
 
 | Phase | Weight | Status |
 |---|---:|---|
-| 0 Repository and engineering foundation | 4% | done |
-| 1 CLI foundation | 12% | done |
-| 2 Linux VM harness | 10% | in progress, scaffolded |
+| 0 Repository and engineering foundation | 4% | done after PR #1 checks pass |
+| 1 CLI foundation | 12% | done after PR #1 checks pass |
+| 2 Linux VM harness | 10% | implementation in progress, gate not passed |
 | 3 SSH/bootstrap | 10% | next |
 | 4 OS/security | 9% | pending |
 | 5 Docker/runtime | 9% | pending |
@@ -20,51 +20,20 @@ Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Ph
 | 11 Full DR | 6% | pending |
 | 12 Scaling simulation | 4% | pending |
 
-**Honest status: 16% implemented and unit-tested. Phase 2 is intentionally not marked complete until its VM gate passes.**
-
-## Phase 0: repository foundation
-
-- [x] 0.1 Repository scaffold and §17 directory layout.
-- [x] 0.2 Zero runtime dependencies, Node >=22.18.
-- [x] 0.3 TypeScript strict + erasableSyntaxOnly.
-- [x] 0.4 Configurable lint/typecheck/test commands.
-- [ ] 0.5 CI artifact upload without secrets.
-- [ ] 0.6 WSL2 command documentation and Makefile.
-
-Gate: clean clone `npm ci && npm run check`.
-
-## Phase 1: CLI foundation
-
-- [x] 1.1 Typed configuration model and defaults.
-- [x] 1.2 Path-aware dependency-free validation.
-- [x] 1.3 D5 resource budget assertions.
-- [x] 1.4 Legal provisioning state machine.
-- [x] 1.5 Step contract precheck/apply/verify/rollback.
-- [x] 1.6 Result/error taxonomy.
-- [x] 1.7 Bounded exponential retry with jitter.
-- [x] 1.8 Safe Ctrl+C cancellation.
-- [x] 1.9 Atomic state persistence and run locking.
-- [x] 1.10 Resume/reset/reinstall and config fingerprints.
-- [x] 1.11 Dry-run enforced centrally by runner.
-- [x] 1.12 JSONL logging and redaction.
-- [x] 1.13 Human and machine reports.
-- [x] 1.14 CLI parser and command dispatcher.
-- [x] 1.15 Unit tests for success and negative paths.
-
-Gate: injected failures resume without corrupting state.
+**Honest status: Phase 0/1 code is in PR #1. Phase 2 is not called complete until a real Ubuntu VM boots and the lifecycle is repeated from WSL2.**
 
 ## Phase 2: Linux VM harness
 
-- [ ] 2.1 QEMU/KVM backend inside WSL2; Incus adapter.
-- [ ] 2.2 `/dev/kvm` hard preflight and TCG degraded mode.
-- [ ] 2.3 Ubuntu cloud image checksum and cache.
-- [ ] 2.4 Ephemeral create/start/stop/reboot/destroy lifecycle.
-- [ ] 2.5 cloud-init seed with SSH/systemd and no preinstalled Docker.
-- [ ] 2.6 clean snapshot reset, fixtures and artifact collector.
-- [ ] 2.7 reproducible commands: create, provision, failure injection, collect, destroy, repeat.
+- [x] 2.1 QEMU/KVM backend inside WSL2; backend interface is pluggable.
+- [x] 2.2 `/dev/kvm` detection and explicit TCG degraded mode.
+- [x] 2.3 Ubuntu 24.04 cloud image download with official SHA256 verification.
+- [x] 2.4 Ephemeral create/start/stop/reboot/reset/destroy lifecycle primitives.
+- [x] 2.5 cloud-init seed with a throwaway Ed25519 key and Ubuntu test user.
+- [ ] 2.6 Clean snapshot reset, guest SSH readiness, console/SSH artifact collector.
+- [ ] 2.7 Full acceptance command sequence on a real VM, including reboot and repeat-from-clean.
 
-Gate: real VM acceptance run is repeatable from Windows via WSL2 with no manual SSH repair.
+**Gate:** real VM acceptance run is repeatable from Windows via WSL2 with no manual SSH repair. TCG can prove functional behavior only, never performance or RTO.
 
 ## Phase 3 through 12
 
-The remaining 75% is split into separate PRs: SSH/bootstrap, OS hardening, Docker/Compose, OpenBao, deployment/rollback, pgBackRest/PITR, monitoring, chaos, DR and scaling. No real VPS before local acceptance, chaos and DR gates pass twice (D10).
+Separate PRs implement SSH/bootstrap, OS hardening, Docker/Compose, OpenBao, deployment/rollback, pgBackRest/PITR, monitoring, chaos, DR and scaling. No real VPS before local acceptance, chaos and DR gates pass twice (D10).
