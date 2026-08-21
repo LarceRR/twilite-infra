@@ -12,23 +12,28 @@ Phase 3 implements the access-changing path from issue #167 and D12.
 - Private Ed25519 keys are generated on the operator host, mode `0600`, and never copied to the VPS.
 - Remote file writes use a temp file, `sync -f`, and `mv`, with a restrictive mode.
 
+## Initial user
+
+Production VPS may provide a non-root initial user with passwordless sudo; root SSH login is not required. The preflight accepts either `id -u = 0` (root) or `sudo -n true` success (non-root with sudo). When the initial user is not root, every privileged bootstrap command (useradd, install, chown, sshd -t, systemctl reload ssh) is prefixed with `sudo -n` through the existing argv-only transport.
+
 ## Bootstrap order
 
 ```text
-initial root access
-→ create admin user + sudo
-→ install Ed25519 authorized key
-→ verify admin SSH + sudo
-→ write transitional sshd policy (new port, root fallback)
-→ validate/reload sshd
-→ verify admin through final port
-→ write final policy with root login disabled
-→ validate/reload sshd
-→ verify final admin path
+initial access (root or non-root + sudo)
+-> detect privilege mode
+-> create admin user + sudo (with sudo prefix if non-root)
+-> install Ed25519 authorized key (idempotent append)
+-> verify admin SSH + sudo on initial port
+-> write transitional sshd policy (new port, root fallback)
+-> validate/reload sshd (with sudo prefix if non-root)
+-> verify admin through final port
+-> write final policy with root login disabled
+-> validate/reload sshd
+-> verify final admin path
 ```
 
-If a verification step fails, the previous access path is not intentionally removed. The final transition is not accepted until the final admin connection and `id -u` succeed.
+If a verification step fails, the previous access path is not intentionally removed. The final transition is not accepted until the final admin connection and `sudo -n true` succeed.
 
-## Gate still pending
+## Password bootstrap
 
-The unit tests cover argv safety, redaction boundaries, key permissions, configuration rendering and ordering. The Phase 3 gate remains pending until this flow runs against the real systemd/SSH Ubuntu VM from Phase 2, including interruption and reboot tests.
+Fresh VPS password bootstrap is supported. The password is handled by OpenSSH's TTY prompt; the Node process never receives it. See `docs/password-bootstrap.md`.

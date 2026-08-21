@@ -11,14 +11,14 @@ Provisioning CLI and infrastructure-as-code for Twilite/LumiApp, governed by [La
 
 ## Fresh VPS password bootstrap
 
-Supported. Set `target.initialAuth.mode` to `password` in a secret-free config. Review the displayed SSH fingerprint, then let OpenSSH prompt for the provider password on the TTY. The password never enters CLI args, config, environment, logs or artifacts. After the generated Ed25519 admin key is verified, the password session closes and the rest of provisioning is key-only. See `docs/password-bootstrap.md`.
+Supported. Production VPS may provide a non-root initial user with passwordless sudo; root SSH login is not required. Set `target.initialAuth.mode` to `password` and `target.initialUser` to the provider user (e.g. `vps`). Review the displayed SSH fingerprint, then let OpenSSH prompt for the provider password on the TTY. The password never enters CLI args, config, environment, logs or artifacts. After the generated Ed25519 admin key is verified, the password session closes and the rest of provisioning is key-only. See `docs/password-bootstrap.md` and `docs/ssh-bootstrap.md`.
 
 ## CLI
 
 ```bash
 node src/cli/main.ts doctor
 node src/cli/main.ts plan --config examples/config.production.json
-node src/cli/main.ts provision --config examples/config.production.json
+TWILITE_ACCEPT_HOST_KEY=1 node src/cli/main.ts provision --config examples/config.production.json
 node src/cli/main.ts resume --config examples/config.production.json
 node src/cli/main.ts status --config examples/config.production.json
 node src/cli/main.ts report --config examples/config.production.json
