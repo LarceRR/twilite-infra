@@ -4,5 +4,6 @@ export interface SshTransportOptions { readonly connectTimeoutSeconds?: number; 
 export interface CommandSpec { readonly file: string; readonly args: readonly string[]; readonly stdin?: string | undefined; readonly timeoutMs?: number | undefined; readonly signal?: AbortSignal | undefined; }
 export interface CommandResult { readonly file: string; readonly args: readonly string[]; readonly exitCode: number; readonly stdout: string; readonly stderr: string; readonly durationMs: number; }
 export interface ProcessRunner { run(spec: CommandSpec): Promise<CommandResult>; }
-export interface SshTransport { readonly target: SshTarget; exec(command: readonly string[], options?: { readonly timeoutMs?: number; readonly signal?: AbortSignal }): Promise<CommandResult>; writeAtomic(remotePath: string, content: string, mode?: number, options?: { readonly timeoutMs?: number; readonly signal?: AbortSignal }): Promise<CommandResult>; closeControlMaster(): Promise<void>; }
+export interface SshCallOptions { readonly timeoutMs?: number | undefined; readonly signal?: AbortSignal | undefined; }
+export interface SshTransport { readonly target: SshTarget; exec(command: readonly string[], options?: SshCallOptions): Promise<CommandResult>; writeAtomic(remotePath: string, content: string, mode?: number, options?: SshCallOptions): Promise<CommandResult>; closeControlMaster(): Promise<void>; }
 export interface SshFailure { readonly error: InfraError; readonly command: CommandSpec; }
