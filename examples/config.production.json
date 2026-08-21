@@ -1,0 +1,27 @@
+{
+  "label": "lumiapp-production",
+  "target": {
+    "host": "PROVIDER_VPS_IP",
+    "initialUser": "vps",
+    "initialAuth": { "mode": "password" },
+    "initialSshPort": 22,
+    "finalSshPort": 5564,
+    "adminUser": "lumiadmin",
+    "deployUser": "lumideploy",
+    "knownHostsPath": ".secrets/production/known_hosts",
+    "keyDirectory": ".secrets/production/keys"
+  },
+  "security": {
+    "publicPorts": [80, 443],
+    "ipv6": "disabled"
+  },
+  "openbao": {
+    "unsealMode": "kms",
+    "kmsKeyId": "EXTERNAL_KMS_KEY_ID"
+  },
+  "preflight": {
+    "minCpuCores": 2,
+    "minMemoryMiB": 1900,
+    "minDiskGiB": 20
+  }
+}

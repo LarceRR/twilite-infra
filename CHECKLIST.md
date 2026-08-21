@@ -1,45 +1,40 @@
 # twilite-infra implementation checklist (0% -> 100%)
 
-Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Phase order follows §18.2; D1-D13 are binding. New contradictions go to issue #167 before code changes.
+Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). D1-D13 are binding. New contradictions go to issue #167 before code changes.
 
-## Weighted progress
+## Current status
 
-| Phase | Weight | Status |
-|---|---:|---|
-| 0 Repository and engineering foundation | 4% | code complete in unified PR #7 |
-| 1 CLI foundation | 12% | code complete in unified PR #7 |
-| 2 Linux VM harness | 10% | code complete, real-VM gate pending |
-| 3 SSH/bootstrap | 10% | code complete, real-VM gate pending |
-| 4 OS/security | 9% | code complete, real-VM gate pending |
-| 5 Docker/runtime | 9% | code complete, real-VM gate pending |
-| 6 OpenBao | 8% | code complete, recovery gate pending |
-| 7 Application deployment | 8% | code complete, rollout gate pending |
-| 8 PostgreSQL PITR | 8% | code complete, restore gate pending |
-| 9 Monitoring/logging | 6% | code complete, alert gate pending |
-| 10 Chaos/failure injection | 6% | code complete, real-VM gate pending |
-| 11 Full DR | 6% | code complete, two-drill gate pending |
-| 12 Scaling simulation | 4% | code complete, simulation gate pending |
+**Code implementation: complete through password-only bootstrap architecture. Operational production readiness is blocked until real Linux VM acceptance passes.**
 
-**Code/planning coverage: 100%. Operational acceptance: not complete until the required WSL2 VM, chaos and DR gates pass twice. No VPS is used.**
+- CI typecheck and unit/security contract suites: required and green.
+- Password-only fresh-VPS flow: implemented, interactive and secret-safe.
+- Existing key bootstrap: backward-compatible.
+- Real VM acceptance: must still be executed on clean Ubuntu with systemd, SSH, Docker, UFW and reboot.
 
-## Phase 11: Full DR
+## Password bootstrap requirements
 
-- [x] Ordered disposable-VPS loss and replacement sequence.
-- [x] External OpenBao recovery material restore.
-- [x] PostgreSQL base+WAL restore and immutable release restore.
-- [x] Health smoke and disposable DNS switch contract.
-- [x] Report contract with measured RPO/RTO and undocumented-action detection.
-- [ ] Execute drill 1 on clean real VM.
-- [ ] Execute drill 2 after corrections on a second clean real VM.
+- [x] Explicit `target.initialAuth.mode`: `key | password | auto`.
+- [x] Legacy config with `identityPath` and no `initialAuth` remains compatible.
+- [x] Interactive OpenSSH password prompt through TTY, no sshpass.
+- [x] Password never enters argv, config, environment, logs or artifacts.
+- [x] Fingerprint scanned and explicitly accepted before password authentication.
+- [x] Generated local Ed25519 admin key is installed and verified before password session closes.
+- [x] Password authentication is disabled only in final SSH hardening after key verification.
+- [x] authorized_keys append-only/idempotent behavior preserves unrelated keys.
+- [x] Wrong password, wrong fingerprint, interruption and injection contracts covered.
 
-## Phase 12: Upgrade/scaling
+## Operational gates still required
 
-- [x] Inventory-driven 2 GiB, larger-host, split-data and multi-API profiles.
-- [x] Measurable scaling triggers and ordered migration path.
-- [x] Target-group-compatible role model and OpenBao 3-node HA rule.
-- [x] Resource/profile change does not change application release contract.
-- [ ] Run real VM profile simulation and record resource measurements.
+- [ ] Clean WSL2 QEMU Ubuntu VM: create, boot and SSH readiness.
+- [ ] Fresh VM password-only bootstrap to final key-only READY.
+- [ ] Existing key bootstrap to READY.
+- [ ] Wrong password/fingerprint abort with no destructive changes.
+- [ ] Interrupted bootstrap resume and idempotent rerun.
+- [ ] Docker/UFW/Fail2ban/systemd/reboot acceptance.
+- [ ] OpenBao init/unseal/recovery and Raft restore.
+- [ ] PostgreSQL backup/PITR restore with measured RPO/RTO.
+- [ ] Full P0 chaos matrix with recovery and alert evidence.
+- [ ] Two consecutive full DR drills.
+- [ ] Scaling simulation with measured resources.
 
-## Definition of Done
-
-The repository now contains the complete implementation contract from 0% to 100%. The issue is operationally done only after local acceptance, idempotency, failure injection, chaos, PITR, OpenBao recovery, two consecutive DR drills and scaling simulation pass on real Linux VMs through WSL2. A real VPS remains blocked until then.
+No real production VPS is declared ready until every operational gate passes. No password or private key belongs in Git.
