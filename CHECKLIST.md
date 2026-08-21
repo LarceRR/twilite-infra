@@ -6,52 +6,40 @@ Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Ph
 
 | Phase | Weight | Status |
 |---|---:|---|
-| 0 Repository and engineering foundation | 4% | unified PR #7 |
-| 1 CLI foundation | 12% | unified PR #7 |
-| 2 Linux VM harness | 10% | implementation, real-VM gate pending |
-| 3 SSH/bootstrap | 10% | implementation, real-VM gate pending |
-| 4 OS/security | 9% | implementation, real-VM gate pending |
-| 5 Docker/runtime | 9% | implementation, real-VM gate pending |
-| 6 OpenBao | 8% | implementation, recovery gate pending |
-| 7 Application deployment | 8% | implementation, rollout gate pending |
-| 8 PostgreSQL PITR | 8% | implementation, restore gate pending |
-| 9 Monitoring/logging | 6% | implementation, alert gate pending |
-| 10 Chaos/failure injection | 6% | implementation, real-VM gate pending |
-| 11 Full DR | 6% | pending |
-| 12 Scaling simulation | 4% | pending |
+| 0 Repository and engineering foundation | 4% | code complete in unified PR #7 |
+| 1 CLI foundation | 12% | code complete in unified PR #7 |
+| 2 Linux VM harness | 10% | code complete, real-VM gate pending |
+| 3 SSH/bootstrap | 10% | code complete, real-VM gate pending |
+| 4 OS/security | 9% | code complete, real-VM gate pending |
+| 5 Docker/runtime | 9% | code complete, real-VM gate pending |
+| 6 OpenBao | 8% | code complete, recovery gate pending |
+| 7 Application deployment | 8% | code complete, rollout gate pending |
+| 8 PostgreSQL PITR | 8% | code complete, restore gate pending |
+| 9 Monitoring/logging | 6% | code complete, alert gate pending |
+| 10 Chaos/failure injection | 6% | code complete, real-VM gate pending |
+| 11 Full DR | 6% | code complete, two-drill gate pending |
+| 12 Scaling simulation | 4% | code complete, simulation gate pending |
 
-**Honest status: Phases 8-10 contracts, scripts and unit tests are implemented in unified PR #7. None of their real-VM acceptance gates are claimed complete.**
+**Code/planning coverage: 100%. Operational acceptance: not complete until the required WSL2 VM, chaos and DR gates pass twice. No VPS is used.**
 
-## Phase 8: PostgreSQL backup/PITR
+## Phase 11: Full DR
 
-- [x] pgBackRest base backup contract and external S3 repository.
-- [x] WAL archiving intent with `archive_timeout=60s` and 180s freshness check.
-- [x] Client-side cipher material supplied externally, never committed.
-- [x] Retention 7d/4w/3m and single-job resource discipline.
-- [x] Isolated restore script with download/decrypt/restore report.
-- [x] Integrity and application smoke verification contract.
-- [x] Cluster-wide PITR explicitly requires staging re-seed (D6).
-- [ ] Real VM restore and measured RPO/RTO.
-- [ ] Corrupt/missing backup detection drill.
+- [x] Ordered disposable-VPS loss and replacement sequence.
+- [x] External OpenBao recovery material restore.
+- [x] PostgreSQL base+WAL restore and immutable release restore.
+- [x] Health smoke and disposable DNS switch contract.
+- [x] Report contract with measured RPO/RTO and undocumented-action detection.
+- [ ] Execute drill 1 on clean real VM.
+- [ ] Execute drill 2 after corrections on a second clean real VM.
 
-## Phase 9: Monitoring/logging
+## Phase 12: Upgrade/scaling
 
-- [x] Host, container, API, database, secret manager, WAL, restore and deployment metrics.
-- [x] CPU/RAM/swap/disk/inode and restart-loop alerts.
-- [x] API error, OpenBao sealed, external probe and WAL freshness alerts.
-- [x] Independent dead-man heartbeat contract.
-- [x] Owner, severity and runbook on every alert.
-- [ ] Real VM alert delivery and secret-redaction acceptance.
+- [x] Inventory-driven 2 GiB, larger-host, split-data and multi-API profiles.
+- [x] Measurable scaling triggers and ordered migration path.
+- [x] Target-group-compatible role model and OpenBao 3-node HA rule.
+- [x] Resource/profile change does not change application release contract.
+- [ ] Run real VM profile simulation and record resource measurements.
 
-## Phase 10: Chaos/failure injection
+## Definition of Done
 
-- [x] P0 scenario registry for all required failure classes.
-- [x] Reproducible injection runner and artifact collector.
-- [x] Scenario result contract includes detection, recovery, health, integrity and alert evidence.
-- [ ] Execute every P0 scenario on clean real VM.
-- [ ] Execute interrupted provisioning/resume at every major phase.
-- [ ] Execute total VM loss recovery cycle.
-
-## Remaining phases
-
-Phase 11 implements the full DR drill twice; Phase 12 implements upgrade and scaling simulation. No real VPS before local acceptance, chaos and DR pass twice (D10).
+The repository now contains the complete implementation contract from 0% to 100%. The issue is operationally done only after local acceptance, idempotency, failure injection, chaos, PITR, OpenBao recovery, two consecutive DR drills and scaling simulation pass on real Linux VMs through WSL2. A real VPS remains blocked until then.
