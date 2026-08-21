@@ -1,0 +1,5 @@
+import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import type { VmBackendName, VmPreflight } from './types.ts';
+function has(binary: string): boolean { try { execFileSync('which', [binary], { stdio: 'ignore', timeout: 3000 }); return true; } catch { return false; } }
+export function detectPreflight(backend: VmBackendName = 'qemu'): VmPreflight { const wsl2 = process.platform === 'linux' && existsSync('/proc/sys/fs/binfmt_misc/WSLInterop'); const kvm = existsSync('/dev/kvm'); const qemu = backend === 'qemu' ? has('qemu-system-x86_64') && has('qemu-img') : has('incus'); const ssh = has('ssh'); const failures: string[] = []; if (!wsl2) failures.push('WSL2 Linux environment was not detected'); if (!qemu) failures.push(`${backend} executable or qemu-img is missing`); if (!ssh) failures.push('OpenSSH client is missing'); if (backend === 'qemu' && !kvm) failures.push('/dev/kvm is unavailable; functional TCG is DEGRADED and invalid for performance/RTO evidence'); return { backend, acceleration: kvm ? 'kvm' : 'tcg', wsl2, kvm, qemu, ssh, degraded: !kvm, failures }; }

@@ -1,0 +1,15 @@
+{
+  "label": "lumiapp-local-vm",
+  "target": {
+    "host": "127.0.0.1",
+    "initialUser": "root",
+    "initialSshPort": 2222,
+    "finalSshPort": 5564,
+    "adminUser": "lumiadmin",
+    "knownHostsPath": ".vm/vps-2gb/known_hosts",
+    "identityPath": ".vm/vps-2gb/id_ed25519",
+    "keyDirectory": ".vm/vps-2gb/keys"
+  },
+  "security": { "publicPorts": [] },
+  "openbao": { "unsealMode": "manual" }
+}

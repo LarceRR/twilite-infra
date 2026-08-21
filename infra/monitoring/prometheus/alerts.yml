@@ -1,0 +1,59 @@
+groups:
+  - name: twilite-host
+    rules:
+      - alert: TwiliteHostMemoryHigh
+        expr: twilite_host_memory_ratio > 0.80
+        for: 10m
+        labels: { severity: critical, owner: infra-oncall }
+        annotations: { runbook: runbooks/host-memory.md }
+      - alert: TwiliteSwapUsed
+        expr: twilite_host_swap_bytes > 0
+        for: 5m
+        labels: { severity: warning, owner: infra-oncall }
+        annotations: { runbook: runbooks/resource-pressure.md }
+      - alert: TwiliteDiskPressure
+        expr: twilite_host_disk_free_ratio < 0.15 or twilite_host_inode_free_ratio < 0.10
+        for: 5m
+        labels: { severity: critical, owner: infra-oncall }
+        annotations: { runbook: runbooks/disk-pressure.md }
+  - name: twilite-services
+    rules:
+      - alert: TwiliteContainerRestartLoop
+        expr: rate(twilite_container_restarts_total[10m]) > 0.1
+        for: 5m
+        labels: { severity: critical, owner: app-oncall }
+        annotations: { runbook: runbooks/restart-loop.md }
+      - alert: TwiliteApiErrors
+        expr: rate(twilite_api_errors_total[5m]) > 0.05
+        for: 5m
+        labels: { severity: critical, owner: app-oncall }
+        annotations: { runbook: runbooks/api-errors.md }
+      - alert: TwiliteOpenBaoSealed
+        expr: twilite_openbao_sealed == 1
+        for: 2m
+        labels: { severity: critical, owner: infra-oncall }
+        annotations: { runbook: runbooks/openbao-recovery.md }
+  - name: twilite-data
+    rules:
+      - alert: TwiliteWalArchiveStale
+        expr: twilite_wal_archive_age_seconds > 180
+        for: 3m
+        labels: { severity: critical, owner: data-oncall }
+        annotations: { runbook: runbooks/wal-archive.md }
+      - alert: TwiliteRestoreDrillMissing
+        expr: time() - twilite_restore_last_success_timestamp > 604800
+        for: 5m
+        labels: { severity: critical, owner: data-oncall }
+        annotations: { runbook: runbooks/restore-drill.md }
+  - name: twilite-external
+    rules:
+      - alert: TwiliteExternalProbeDown
+        expr: twilite_external_probe_up == 0
+        for: 2m
+        labels: { severity: critical, owner: infra-oncall }
+        annotations: { runbook: runbooks/external-probe.md }
+      - alert: TwiliteDeadManMissing
+        expr: absent_over_time(twilite_deadman_heartbeat[3m])
+        for: 1m
+        labels: { severity: critical, owner: infra-oncall }
+        annotations: { runbook: runbooks/dead-man-switch.md }

@@ -1,0 +1,14 @@
+node_modules/
+.artifacts/
+.vm/
+*.log
+*.jsonl
+*.qcow2
+*.iso
+*.img
+.state/
+.secrets/
+*.pem
+*.key
+id_ed25519*
+!docs/**/*.key.example

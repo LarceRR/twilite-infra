@@ -1,0 +1,7 @@
+{
+  "profile": "vps-2gb",
+  "targets": [
+    { "id": "local-vm-prod-api", "host": "127.0.0.1", "role": "application", "environment": "production" },
+    { "id": "local-vm-stage-api", "host": "127.0.0.1", "role": "application", "environment": "staging" }
+  ]
+}

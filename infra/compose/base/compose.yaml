@@ -1,0 +1,70 @@
+name: ${INFRA_PROJECT_NAME:-lumi-infra}
+services:
+  postgres:
+    image: postgres:16.4@sha256:REPLACE_WITH_REVIEWED_DIGEST
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER:?set in protected environment}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_admin_secret
+      POSTGRES_DB: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    secrets: [db_admin_secret]
+    command: ["postgres", "-c", "archive_mode=on", "-c", "archive_timeout=60s", "-c", "wal_level=replica", "-c", "max_connections=80"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    networks: [infra_net, prod_net, stage_net]
+    mem_limit: 384m
+    mem_reservation: 256m
+    cpus: "1.00"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+  redis:
+    image: redis:7.4.1@sha256:REPLACE_WITH_REVIEWED_DIGEST
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    volumes: ["redis_data:/data", "./redis.conf:/usr/local/etc/redis/redis.conf:ro"]
+    secrets: [redis_acl]
+    networks: [infra_net, prod_net, stage_net]
+    mem_limit: 96m
+    mem_reservation: 64m
+    cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+  openbao:
+    image: openbao/openbao:2.2.0@sha256:REPLACE_WITH_REVIEWED_DIGEST
+    restart: unless-stopped
+    cap_add: ["IPC_LOCK"]
+    command: ["server", "-config=/openbao/config/openbao.hcl"]
+    volumes:
+      - openbao_data:/openbao/data
+      - ./../../openbao/config/openbao.hcl:/openbao/config/openbao.hcl:ro
+      - ./../../openbao/tls:/openbao/tls:ro
+      - ./../../openbao/policies:/openbao/policies:ro
+    networks: [infra_net]
+    mem_limit: 192m
+    mem_reservation: 128m
+    cpus: "0.50"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- --no-check-certificate https://127.0.0.1:8200/v1/sys/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+volumes:
+  postgres_data: { name: lumi_postgres_data }
+  redis_data: { name: lumi_redis_data }
+  openbao_data: { name: lumi_openbao_data }
+networks:
+  infra_net: { name: lumi_infra_net }
+  prod_net: { name: lumi_prod_net }
+  stage_net: { name: lumi_stage_net }
+secrets:
+  db_admin_secret:
+    file: ${DB_ADMIN_SECRET_FILE:?set to a root-only local secret path}
+  redis_acl:
+    file: ${REDIS_ACL_FILE:?set to a root-only local secret path}

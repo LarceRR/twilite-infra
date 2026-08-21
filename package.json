@@ -1,0 +1,23 @@
+{
+  "name": "twilite-infra",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Provisioning CLI and infrastructure-as-code for the Twilite/LumiApp platform (decision log: LarceRR/Twilite#167)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": { "node": ">=22.18.0" },
+  "bin": { "twilite-infra": "./src/cli/main.ts", "vmctl": "./src/harness/vmctl/main.ts" },
+  "scripts": {
+    "cli": "node src/cli/main.ts",
+    "vmctl": "node src/harness/vmctl/main.ts",
+    "typecheck": "npm exec -- tsc --noEmit",
+    "lint": "npm run typecheck",
+    "test": "node --test --test-reporter=spec test/unit/smoke.test.ts test/unit/vmctl.test.ts test/unit/ssh.test.ts test/unit/os-security.test.ts",
+    "test:unit": "npm run test",
+    "test:runtime-contract": "node --test --test-reporter=spec test/unit/runtime-secrets-deploy.test.ts",
+    "test:resilience-contract": "node --test --test-reporter=spec test/unit/backup-monitoring-chaos.test.ts test/unit/dr-scaling.test.ts",
+    "check": "npm run typecheck && npm run test:unit && npm run test:resilience-contract"
+  },
+  "devDependencies": { "@types/node": "^22.18.0", "typescript": "^5.9.2" },
+  "dependencies": {}
+}
