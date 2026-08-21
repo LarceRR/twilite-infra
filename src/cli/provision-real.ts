@@ -13,12 +13,10 @@ import type { Logger } from '../core/logging/logger.ts';
 
 export interface RealProvisionOptions { readonly config: ProvisionConfig; readonly repoRoot: string; readonly logger: Logger; readonly signal?: AbortSignal; }
 
-/**
- * Real host path used by `provision`, not a mock runner. Every mutation is followed by a command-level
- * verification. It deliberately stops before runtime deployment when required external material is absent.
- */
+/** Executes the real SSH/bootstrap + OS baseline path on one Linux host. */
 export async function provisionRealHost(options: RealProvisionOptions): Promise<void> {
   const { config, repoRoot, logger, signal } = options;
+  if (process.platform !== 'linux') throw new Error('real provisioning must run inside Linux/WSL2, not native Windows');
   const target = config.target;
   const identityFile = target.identityPath;
   const knownHostsFile = target.knownHostsPath ?? resolve(target.keyDirectory, 'known_hosts');
@@ -52,8 +50,13 @@ function createTransport(input: { readonly host: string; readonly port: number; 
 }
 
 async function verifyRemotePreflight(transport: SshTransport, config: ProvisionConfig): Promise<void> {
-  const result = await transport.exec(['bash', '-s'], { timeoutMs: config.behavior.stepTimeoutMs });
-  void result;
+  const identity = await transport.exec(['id', '-u'], { timeoutMs: config.behavior.stepTimeoutMs });
+  if (identity.stdout.trim() !== '0') throw new Error('initial SSH identity is not root');
+  const os = await transport.exec(['cat', '/etc/os-release'], { timeoutMs: config.behavior.stepTimeoutMs });
+  if (!/^ID=ubuntu$/m.test(os.stdout)) throw new Error('target OS is not Ubuntu');
+  await transport.exec(['uname', '-m'], { timeoutMs: config.behavior.stepTimeoutMs });
+  await transport.exec(['test', '-r', '/proc/meminfo'], { timeoutMs: config.behavior.stepTimeoutMs });
+  await transport.exec(['test', '-w', '/tmp'], { timeoutMs: config.behavior.stepTimeoutMs });
 }
 
 async function applyBaseline(transport: SshTransport, plan: ReturnType<typeof buildBaselinePlan>, repoRoot: string, signal: AbortSignal | undefined, logger: Logger): Promise<void> {
@@ -67,7 +70,8 @@ async function applyBaseline(transport: SshTransport, plan: ReturnType<typeof bu
   await transport.writeAtomic('/tmp/twilite-install-docker.sh', dockerScript, 0o700, { signal });
   await transport.exec(['sudo', 'bash', '/tmp/twilite-install-packages.sh'], { signal, timeoutMs: 900_000 });
   await transport.exec(['sudo', 'bash', '/tmp/twilite-install-docker.sh'], { signal, timeoutMs: 900_000 });
-  await transport.exec(['sudo', 'TWILITE_SSH_PORT=' + String(plan.sshPort), 'TWILITE_PUBLIC_PORTS=' + plan.publicPorts.filter((port) => port !== plan.sshPort).join(' '), 'bash', '/usr/local/sbin/twilite-apply-ufw'], { signal, timeoutMs: 120_000 });
+  const publicPorts = plan.publicPorts.filter((port) => port !== plan.sshPort).join(' ');
+  await transport.exec(['sudo', 'env', `TWILITE_SSH_PORT=${plan.sshPort}`, `TWILITE_PUBLIC_PORTS=${publicPorts}`, 'bash', '/usr/local/sbin/twilite-apply-ufw'], { signal, timeoutMs: 120_000 });
   await transport.exec(['sudo', 'systemctl', 'daemon-reload'], { signal });
   await transport.exec(['sudo', 'systemctl', 'restart', 'docker'], { signal, timeoutMs: 120_000 });
 }
