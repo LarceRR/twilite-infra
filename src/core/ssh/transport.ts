@@ -1,6 +1,6 @@
 import { createProcessRunner } from './process.ts';
 import { buildControlCloseArgs, buildSshArgs } from './argv.ts';
-import type { CommandResult, ProcessRunner, SshTarget, SshTransport, SshTransportOptions } from './types.ts';
+import type { ProcessRunner, SshTarget, SshTransport, SshTransportOptions } from './types.ts';
 const ATOMIC_WRITE_SCRIPT = `set -eu
 path=$1
 mode=$2
