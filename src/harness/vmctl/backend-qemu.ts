@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { spawn, execFileSync } from 'node:child_process';
 import { connect } from 'node:net';
-import type { VmBackend, VmPaths, VmPreflight, VmProfile, VmStatus } from './types.ts';
+import type { VmBackend, VmPaths, VmPreflight, VmStatus } from './types.ts';
 import { detectPreflight } from './preflight.ts';
 import { qemuCommand } from './commands.ts';
 import { ensureUbuntuImage } from './image.ts';
