@@ -17,7 +17,7 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          tests=(test/unit/smoke.test.ts test/unit/vmctl.test.ts test/unit/ssh.test.ts test/unit/os-security.test.ts)
+          tests=(test/unit/smoke.test.ts test/unit/vmctl.test.ts test/unit/ssh.test.ts test/unit/password-bootstrap.test.ts test/unit/os-security.test.ts)
           failed=0
           for test_file in "${tests[@]}"; do
             echo "===== $test_file ====="
