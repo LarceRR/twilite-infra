@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { createSshTransport } from '../core/ssh/transport.ts';
 import { controlPathFor } from '../core/ssh/util.ts';
 import { scanHostFingerprint, trustHostFingerprint } from '../core/ssh/fingerprint.ts';
-import { generateEd25519KeyPair, validatePrivateKeyPath } from '../core/ssh/keys.ts';
+import { generateEd25519KeyPair } from '../core/ssh/keys.ts';
 import { bootstrapSsh } from '../core/ssh/bootstrap.ts';
 import { startInteractivePasswordControlMaster } from '../core/ssh/password.ts';
 import { buildBaselinePlan } from '../core/security/baseline.ts';
