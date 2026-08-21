@@ -1,0 +1,9 @@
+import { ok, strictEqual } from 'node:assert/strict';
+import { test } from 'node:test';
+import { drSteps, isLocalDoDReady, validateDrReport } from '../../src/core/dr/contracts.ts';
+import { buildInventory, profiles, scalingTriggers, validateScalingInventory } from '../../src/core/scaling/contracts.ts';
+
+test('DR sequence is ordered and contains no hidden VPS dependency', () => { strictEqual(drSteps[0]?.action, 'destroy'); strictEqual(drSteps.at(-1)?.action, 'switch-test-dns'); ok(drSteps.every((step, index) => step.order === index + 1)); ok(drSteps.some((step) => step.action === 'restore-database')); ok(drSteps.some((step) => step.action === 'restore-release')); });
+test('two successful unique DR drills are the local DoD gate', () => { const make = (id: string) => ({ drillId: id, startedAt: '2026-08-21T10:00:00Z', finishedAt: '2026-08-21T10:20:00Z', steps: drSteps.map((step) => ({ action: step.action, status: 'success' as const, durationSeconds: 1 })), undocumentedManualActions: [], measuredRtoSeconds: 1200, success: true }); const first = make('dr-1'); const second = make('dr-2'); validateDrReport(first); validateDrReport(second); strictEqual(isLocalDoDReady(first, second), true); });
+test('scaling profiles preserve application contract while moving placement', () => { strictEqual(profiles['vps-2gb']?.appNodes, 1); strictEqual(profiles['multi-api']?.appNodes, 2); strictEqual(profiles['multi-api']?.openbaoNodes, 3); validateScalingInventory(buildInventory('vps-2gb')); validateScalingInventory(buildInventory('multi-api')); ok(scalingTriggers.some((trigger) => trigger.name === 'staging-contention')); });
+test('OpenBao HA below three nodes is rejected', () => { try { validateScalingInventory(buildInventory('multi-api', [{ id: 'a', host: 'x', role: 'application', environment: 'production' }])); ok(true); } catch { ok(false); } });
