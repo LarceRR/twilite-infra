@@ -6,45 +6,52 @@ Source: [LarceRR/Twilite#167](https://github.com/LarceRR/Twilite/issues/167). Ph
 
 | Phase | Weight | Status |
 |---|---:|---|
-| 0 Repository and engineering foundation | 4% | foundation in PR #1 |
-| 1 CLI foundation | 12% | foundation in PR #1 |
-| 2 Linux VM harness | 10% | PR #2, real-VM gate pending |
-| 3 SSH/bootstrap | 10% | PR #3, real-VM gate pending |
-| 4 OS/security | 9% | PR #4, real-VM gate pending |
-| 5 Docker/runtime | 9% | PR #6, real-VM gate pending |
-| 6 OpenBao | 8% | PR #6, recovery gate pending |
-| 7 Application deployment | 8% | PR #6, rollout gate pending |
-| 8 PostgreSQL PITR | 8% | pending |
-| 9 Monitoring/logging | 6% | pending |
-| 10 Chaos/failure injection | 6% | pending |
+| 0 Repository and engineering foundation | 4% | unified PR #7 |
+| 1 CLI foundation | 12% | unified PR #7 |
+| 2 Linux VM harness | 10% | implementation, real-VM gate pending |
+| 3 SSH/bootstrap | 10% | implementation, real-VM gate pending |
+| 4 OS/security | 9% | implementation, real-VM gate pending |
+| 5 Docker/runtime | 9% | implementation, real-VM gate pending |
+| 6 OpenBao | 8% | implementation, recovery gate pending |
+| 7 Application deployment | 8% | implementation, rollout gate pending |
+| 8 PostgreSQL PITR | 8% | implementation, restore gate pending |
+| 9 Monitoring/logging | 6% | implementation, alert gate pending |
+| 10 Chaos/failure injection | 6% | implementation, real-VM gate pending |
 | 11 Full DR | 6% | pending |
 | 12 Scaling simulation | 4% | pending |
 
-**Honest status: Phases 5-7 are implemented and unit-tested; real-VM acceptance, isolation, OpenBao recovery and rollback gates are not complete.**
+**Honest status: Phases 8-10 contracts, scripts and unit tests are implemented in unified PR #7. None of their real-VM acceptance gates are claimed complete.**
 
-## Phase 5
+## Phase 8: PostgreSQL backup/PITR
 
-- [x] Digest-pinned Compose and separate project names.
-- [x] Separate production/staging networks and Docker secret files.
-- [x] Healthchecks, restart policy, read-only API FS, dropped caps and no-new-privileges.
-- [x] Resource limits matching the 2 GiB budget.
-- [x] Logical production/staging isolation layout.
-- [ ] Real VM load and negative cross-access tests.
+- [x] pgBackRest base backup contract and external S3 repository.
+- [x] WAL archiving intent with `archive_timeout=60s` and 180s freshness check.
+- [x] Client-side cipher material supplied externally, never committed.
+- [x] Retention 7d/4w/3m and single-job resource discipline.
+- [x] Isolated restore script with download/decrypt/restore report.
+- [x] Integrity and application smoke verification contract.
+- [x] Cluster-wide PITR explicitly requires staging re-seed (D6).
+- [ ] Real VM restore and measured RPO/RTO.
+- [ ] Corrupt/missing backup detection drill.
 
-## Phase 6
+## Phase 9: Monitoring/logging
 
-- [x] TLS 1.3 and Raft Integrated Storage.
-- [x] Explicit Transit/KMS contract.
-- [x] Separate least-privilege policies.
-- [x] Audit bootstrap and external root material.
-- [ ] Real VM seal/unseal, reboot and Raft snapshot restore.
+- [x] Host, container, API, database, secret manager, WAL, restore and deployment metrics.
+- [x] CPU/RAM/swap/disk/inode and restart-loop alerts.
+- [x] API error, OpenBao sealed, external probe and WAL freshness alerts.
+- [x] Independent dead-man heartbeat contract.
+- [x] Owner, severity and runbook on every alert.
+- [ ] Real VM alert delivery and secret-redaction acceptance.
 
-## Phase 7
+## Phase 10: Chaos/failure injection
 
-- [x] Immutable digest/SHA validation; latest rejected.
-- [x] Capacity, migration, readiness and protected smoke gates.
-- [x] Previous release retention and explicit rollback.
-- [x] Staging-first protected production workflow with concurrency.
-- [ ] Real VM broken-release rollback and migration failure acceptance.
+- [x] P0 scenario registry for all required failure classes.
+- [x] Reproducible injection runner and artifact collector.
+- [x] Scenario result contract includes detection, recovery, health, integrity and alert evidence.
+- [ ] Execute every P0 scenario on clean real VM.
+- [ ] Execute interrupted provisioning/resume at every major phase.
+- [ ] Execute total VM loss recovery cycle.
 
-No real VPS before local acceptance, chaos and DR pass twice (D10).
+## Remaining phases
+
+Phase 11 implements the full DR drill twice; Phase 12 implements upgrade and scaling simulation. No real VPS before local acceptance, chaos and DR pass twice (D10).
