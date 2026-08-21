@@ -1,0 +1,49 @@
+name: vm-acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: VM profile
+        required: true
+        default: vps-2gb
+        type: choice
+        options: [vps-2gb, vps-8gb]
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+      - name: Install Linux VM tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 qemu-utils cloud-image-utils genisoimage openssh-client make
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - name: VM preflight
+        run: node src/harness/vmctl/main.ts doctor
+      - name: Create and boot real VM
+        env: { PROFILE: ${{ inputs.profile }} }
+        run: node src/harness/vmctl/main.ts create && node src/harness/vmctl/main.ts start
+      - name: Run real provisioning
+        env: { PROFILE: ${{ inputs.profile }}, TWILITE_ACCEPT_HOST_KEY: '1' }
+        run: make test:vm:provision
+      - name: Verify idempotent rerun
+        env: { PROFILE: ${{ inputs.profile }}, TWILITE_ACCEPT_HOST_KEY: '1' }
+        run: make test:vm:provision
+      - name: Collect artifacts
+        if: always()
+        run: make test:vm:collect
+      - name: Upload VM artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vm-acceptance-${{ inputs.profile }}
+          path: .artifacts/
+          if-no-files-found: ignore
+      - name: Destroy VM
+        if: always()
+        env: { PROFILE: ${{ inputs.profile }} }
+        run: node src/harness/vmctl/main.ts destroy
