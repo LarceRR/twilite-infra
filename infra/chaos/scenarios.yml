@@ -1,0 +1,35 @@
+scenarios:
+  - id: api-kill
+    expected: restart-and-healthy
+  - id: postgres-restart
+    expected: dependency-retry-and-healthy
+  - id: redis-restart
+    expected: dependency-retry-and-healthy
+  - id: openbao-restart
+    expected: alert-and-fail-closed
+  - id: vm-reboot
+    expected: compose-convergence
+  - id: network-loss
+    expected: bounded-retry
+  - id: s3-failure
+    expected: backup-alert
+  - id: disk-pressure
+    expected: disk-alert
+  - id: memory-oom
+    expected: bounded-oom-and-alert
+  - id: broken-release
+    expected: automatic-rollback
+  - id: migration-failure
+    expected: no-traffic-change
+  - id: unreadable-secret
+    expected: fail-closed
+  - id: corrupt-backup
+    expected: corruption-detection
+  - id: failed-restore
+    expected: restore-alert
+  - id: interrupted-provision
+    expected: resumable-state
+  - id: partial-rerun
+    expected: idempotent-resume
+  - id: vps-loss
+    expected: dr-reprovision
