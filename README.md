@@ -4,39 +4,37 @@ Provisioning CLI and infrastructure-as-code for Twilite/LumiApp, governed by [La
 
 ## Requirements
 
-- Node.js >= 22.18.0
+- Node.js >= 22.18.0 running inside Linux/WSL2 for infrastructure work
 - CLI runtime dependencies: none
-- CLI is cross-platform; acceptance, chaos and DR tests run only in Linux through WSL2 on Windows
-- Acceptance tests use real Ubuntu VMs, not ordinary Docker containers
+- acceptance uses real Ubuntu VMs, not ordinary Docker containers
+- repository should live under `~/work`, not `/mnt/c` or `/mnt/d`, so Linux permissions work
+
+## Fresh VPS password bootstrap
+
+Supported. Set `target.initialAuth.mode` to `password` in a secret-free config. Review the displayed SSH fingerprint, then let OpenSSH prompt for the provider password on the TTY. The password never enters CLI args, config, environment, logs or artifacts. After the generated Ed25519 admin key is verified, the password session closes and the rest of provisioning is key-only. See `docs/password-bootstrap.md`.
+
+## CLI
 
 ```bash
-npm ci
-npm run check
-node src/cli/main.ts --help
 node src/cli/main.ts doctor
+node src/cli/main.ts plan --config examples/config.production.json
+node src/cli/main.ts provision --config examples/config.production.json
+node src/cli/main.ts resume --config examples/config.production.json
+node src/cli/main.ts status --config examples/config.production.json
+node src/cli/main.ts report --config examples/config.production.json
 ```
 
-## CLI contract
+`plan` and `--dry-run` never connect or prompt. Real provisioning requires WSL2/Linux, explicit host fingerprint acceptance, and an interactive TTY for password bootstrap.
 
-```text
-CONNECT -> PREFLIGHT -> SSH_BASELINE -> OS_BASELINE -> SECURITY -> DOCKER -> OPENBAO
-  -> STORAGE -> MONITORING -> RUNTIME_BASELINE -> HEALTH_CHECK -> READY
-```
+## WSL2 VM acceptance
 
 ```bash
-node src/cli/main.ts plan --config examples/config.local-vm.json
-node src/cli/main.ts provision --config examples/config.local-vm.json --dry-run
-node src/cli/main.ts provision --config examples/config.local-vm.json --yes
-node src/cli/main.ts resume --config examples/config.local-vm.json --yes
-node src/cli/main.ts status --config examples/config.local-vm.json
-node src/cli/main.ts report --config examples/config.local-vm.json
-node src/cli/main.ts reset --config examples/config.local-vm.json --yes
+make test:vm:doctor
+make test:vm:create PROFILE=vps-2gb
+make test:vm:provision
+make test:vm:chaos CASE=api-kill
+make test:vm:collect
+make test:vm:destroy
 ```
 
-The runner implements typed state, atomic persistence, resume/reinstall semantics, dry-run enforcement, bounded retries, cancellation, JSONL logging, redaction and machine/human reports. Runtime infrastructure steps are added phase by phase and cannot be marked complete by documentation alone.
-
-## WSL2 VM testing
-
-Infrastructure behavior is tested against a real Linux VM with systemd, SSH, Docker daemon, networking, firewall and reboot capability. Docker-in-Docker is not acceptance evidence. The complete lifecycle is documented in `docs/testing-wsl2.md` and exposed through `make`.
-
-See `CHECKLIST.md` for the weighted 0%-100% plan and the exact phase gates.
+Operational readiness is not claimed until the real-VM acceptance, chaos, PITR and two DR drills pass. No production VPS is required for debugging.
